@@ -4,6 +4,10 @@
   "description": "",
   "scripts": {
     "compile": "hardhat compile",
+    "deploy": "hardhat deploy --network calibration",
+    "deploy:mainnet": "hardhat deploy --network filecoin",
+    "demo": "npx hardhat run scripts/demo.ts --network calibration",
+    "timecapsule": "npx hardhat run scripts/timeCapsuleManager.ts --network calibration",
     "test": "hardhat test test/unit/*_test.js --network hardhat",
     "test-staging": "hardhat test test/staging/*_test.js --network goerli",
     "lint": "solhint 'contracts/*.sol'",
@@ -16,6 +20,7 @@
   "dependencies": {
     "@fil-b/filfox-verifier": "^1.0.1",
     "@glif/filecoin-address": "^2.0.43",
+    "@lighthouse-web3/sdk": "^0.3.7",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.8",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-foundry": "^1.0.2-dev.0",
@@ -24,13 +29,14 @@
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
     "@types/mocha": ">=9.1.0",
+    "axios": "^1.7.7",
     "chai": "^4.3.6",
     "dotenv": "^16.0.3",
     "envfile": "^6.18.0",
     "ethers": "^6.13.2",
     "filecoin-solidity-api": "^1.1.3",
+    "form-data": "^4.0.0",
     "hardhat": "^2.26.0",
-    "hardhat-deploy": "^0.12.0",
     "hardhat-deploy-ethers": "^0.4.1",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.1",
@@ -40,5 +46,8 @@
   },
   "mocha": {
     "timeout": 10000000
+  },
+  "devDependencies": {
+    "hardhat-deploy": "^0.12.4"
   }
 }
