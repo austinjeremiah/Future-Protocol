@@ -135,6 +135,9 @@ const UnlockContent = () => {
     message: string;
     content?: string;
   }>({ type: null, message: '' });
+  
+  const [zkTLSLogs, setZkTLSLogs] = useState<string[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -160,22 +163,43 @@ const UnlockContent = () => {
 
     setIsUnlocking(true);
     setUnlockResult({ type: null, message: '' });
+    setZkTLSLogs([]);
+    setShowLogs(true);
 
     try {
       const timeCapsuleService = new TimeCapsuleService();
       
-      console.log(`Attempting to unlock capsule ${capsuleId}...`);
+      // Capture console logs for zkTLS process
+      const originalConsoleLog = console.log;
+      const logs: string[] = [];
+      
+      console.log = (...args: any[]) => {
+        const logMessage = args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+        ).join(' ');
+        logs.push(`[${new Date().toLocaleTimeString()}] ${logMessage}`);
+        setZkTLSLogs([...logs]);
+        originalConsoleLog(...args);
+      };
+      
+      console.log(`🚀 Attempting to unlock capsule ${capsuleId} with zkTLS verification...`);
       
       const result = await timeCapsuleService.unlockTimeCapsule(capsuleId);
 
+      // Restore original console.log
+      console.log = originalConsoleLog;
+
       setUnlockResult({
         type: 'success',
-        message: `Time capsule unlocked successfully! ${result.txHash ? `Transaction: ${result.txHash}` : ''}`,
+        message: `🎉 Time capsule unlocked successfully! ${result.txHash ? `Transaction: ${result.txHash}` : ''}`,
         content: result.content
       });
 
     } catch (error: any) {
-      console.error('Error unlocking time capsule:', error);
+      // Restore original console.log
+      console.log = console.log;
+      
+      console.error('❌ Error unlocking time capsule:', error);
       setUnlockResult({
         type: 'error',
         message: `Failed to unlock time capsule: ${error.message || 'Unknown error'}`
@@ -239,6 +263,33 @@ const UnlockContent = () => {
                   </div>
                 </div>
 
+                {/* zkTLS Process Logs */}
+                {showLogs && zkTLSLogs.length > 0 && (
+                  <div className="bg-gray-900/80 border border-blue-500/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-blue-400 font-semibold text-sm flex items-center">
+                        🔐 zkTLS Verification Process
+                        {isUnlocking && (
+                          <div className="ml-2 w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                        )}
+                      </h3>
+                      <button
+                        onClick={() => setShowLogs(!showLogs)}
+                        className="text-blue-400 hover:text-blue-300 text-xs"
+                      >
+                        {showLogs ? 'Hide' : 'Show'} Logs
+                      </button>
+                    </div>
+                    <div className="bg-black/50 rounded p-3 max-h-48 overflow-y-auto font-mono text-xs text-green-400 leading-relaxed">
+                      {zkTLSLogs.map((log, index) => (
+                        <div key={index} className="mb-1 text-gray-300">
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Status Messages */}
                 {unlockResult.type && (
                   <div className={`p-4 rounded-lg ${
@@ -299,11 +350,17 @@ const UnlockContent = () => {
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                     <div>
-                      <h3 className="text-blue-400 font-semibold text-sm mb-1">🔒 Security Notice</h3>
-                      <p className="text-blue-200 text-sm">
-                        Your private key is processed locally and never sent to our servers. 
-                        Make sure you're the intended recipient before unlocking the capsule.
+                      <h3 className="text-blue-400 font-semibold text-sm mb-1">� zkTLS Security Features</h3>
+                      <p className="text-blue-200 text-sm mb-2">
+                        This unlock process includes advanced security features:
                       </p>
+                      <ul className="text-blue-200 text-xs space-y-1">
+                        <li>• zkTLS proof generation for time validation</li>
+                        <li>• Multi-source NTP server verification</li>
+                        <li>• Receiver authorization validation</li>
+                        <li>• Blocklock decryption support</li>
+                        <li>• All cryptographic operations performed locally</li>
+                      </ul>
                     </div>
                   </div>
                 </div>
