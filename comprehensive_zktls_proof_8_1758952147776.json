@@ -1,0 +1,147 @@
+{
+  "capsuleId": 8,
+  "timestamp": 1758952147776,
+  "receiver": "0xe01Add0c3640a8314132bAF491d101A38ffEF4f0",
+  "verificationSources": {
+    "socialFeed": {
+      "verified": true,
+      "count": 3,
+      "proofs": [
+        {
+          "platform": "Twitter/X",
+          "userId": "@verified_user",
+          "postId": "1234567890123456789",
+          "content": "TimeCapsule unlock verification post #zkTLS #blockchain",
+          "timestamp": 1758952147406,
+          "verified": true,
+          "proofHash": "a8e42b8dfb77cc503d151f89178a5adf356ec6238ab5d40f5a07a7b6dcbc5f85"
+        },
+        {
+          "platform": "GitHub",
+          "userId": "verified-developer",
+          "postId": "commit-abc123def456",
+          "content": "Updated TimeCapsule zkTLS receiver verification",
+          "timestamp": 1758948547406,
+          "verified": true,
+          "proofHash": "04128482035c23871d291b5ace90e95904d776493b4766204d58d1774ab7298a"
+        },
+        {
+          "platform": "LinkedIn",
+          "userId": "blockchain-professional",
+          "postId": "activity-789012345",
+          "content": "Successfully implemented zkTLS verification system for TimeCapsule",
+          "timestamp": 1758944947406,
+          "verified": true,
+          "proofHash": "6ecd28c6363ab650e8380abecabc71d75eeaeb8feb955e330ec1652c2514a187"
+        }
+      ]
+    },
+    "deFiOracles": {
+      "verified": true,
+      "count": 3,
+      "data": [
+        {
+          "protocol": "Chainlink",
+          "asset": "BTC/USD",
+          "price": 67849.5,
+          "timestamp": 1758952147407,
+          "source": "chainlink-price-feed",
+          "verified": true,
+          "proofHash": "c84731ba52bdf298a5a3288a9931307458ceae02e14f7849f4ee7b1432e50f78"
+        },
+        {
+          "protocol": "Uniswap V3",
+          "asset": "ETH/USDC",
+          "price": 2654.32,
+          "timestamp": 1758952147407,
+          "source": "uniswap-v3-twap",
+          "verified": true,
+          "proofHash": "a4ed93eb4eeb66b8033b3edeae756a191394633182d73d648120ebd0f0b27d2d"
+        },
+        {
+          "protocol": "Band Protocol",
+          "asset": "FIL/USD",
+          "price": 4.27,
+          "timestamp": 1758952147407,
+          "source": "band-protocol-oracle",
+          "verified": true,
+          "proofHash": "a8b8cf4761ceac15558163e43870c4beb0765cc246cc89d45e65f2bcf0c88552"
+        }
+      ]
+    },
+    "offChainAPIs": {
+      "verified": true,
+      "count": 3,
+      "proofs": [
+        {
+          "apiName": "OpenWeatherMap",
+          "endpoint": "https://api.openweathermap.org/data/2.5/weather",
+          "data": {
+            "location": "New York",
+            "temperature": 22,
+            "humidity": 65,
+            "condition": "clear"
+          },
+          "responseCode": 200,
+          "timestamp": 1758952147408,
+          "verified": true,
+          "proofHash": "572aa715c57d3ab41629912dc30ed7b70e389ea7d2669c43108cd9e73a482611",
+          "tlsFingerprint": "0dfa8a5a136f41c9fd3a4557156190807c8730ad0ba6a8903e52c5bf96c08b77"
+        },
+        {
+          "apiName": "NewsAPI",
+          "endpoint": "https://newsapi.org/v2/top-headlines",
+          "data": {
+            "totalResults": 38,
+            "articles": [
+              {
+                "title": "Blockchain Technology Advances in 2024",
+                "source": "TechNews"
+              }
+            ]
+          },
+          "responseCode": 200,
+          "timestamp": 1758952147408,
+          "verified": true,
+          "proofHash": "9ce57ebcc43fd9b2f75ce53fa8666db7db05d5f11ce806406024cbc9e9e48050",
+          "tlsFingerprint": "b77a8ec2fa7592d3c1ceaa52e557844d946f0d362e665b0d9bf5d890048a2b0e"
+        },
+        {
+          "apiName": "Alpha Vantage",
+          "endpoint": "https://www.alphavantage.co/query",
+          "data": {
+            "symbol": "AAPL",
+            "price": 189.95,
+            "change": "+2.34",
+            "volume": 45234567
+          },
+          "responseCode": 200,
+          "timestamp": 1758952147408,
+          "verified": true,
+          "proofHash": "a401cbf7eff781c1ba3f604ed297c31783161887c39ffec96ee69ba07c9ca76a",
+          "tlsFingerprint": "1792be8153e920f829e787b29593a5fd63c1aa8ee01bcec418f9dcdf3b611c00"
+        }
+      ]
+    },
+    "blockchain": {
+      "verified": true,
+      "state": {
+        "blockNumber": 3054191,
+        "blockHash": "0x182db19c7f9bf064d16e2e57bb91e98cdbc64c564e57a7cf999f327de1b63192",
+        "blockTimestamp": 1758952110,
+        "network": "filecoin-calibration"
+      }
+    }
+  },
+  "zkTLSMetadata": {
+    "version": "2.0",
+    "cryptographicAlgorithms": [
+      "SHA256",
+      "ECDSA",
+      "TLS1.3"
+    ],
+    "verificationMethod": "Multi-Source-zkTLS",
+    "totalProofs": 10
+  },
+  "masterProofHash": "0a35c8a3b4620a044802fe8618f608bc81838af9451cf1ad6589642961d8541e"
+}
