@@ -42,6 +42,11 @@ const config: HardhatUserConfig = {
             accounts: [deployerPrivateKey],
             chainId: 314159,
         },
+        baseSepolia: {
+            url: "https://sepolia.base.org",
+            accounts: [deployerPrivateKey],
+            chainId: 84532,
+        },
     },
     // configuration for harhdat-verify plugin with Blockscout API
     etherscan: {
