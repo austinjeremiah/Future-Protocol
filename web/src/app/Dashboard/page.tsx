@@ -1,10 +1,129 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
+import { useRouter } from "next/navigation";
+import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
+import {
+  IconArrowLeft,
+  IconBrandTabler,
+  IconSettings,
+  IconUserBolt,
+} from "@tabler/icons-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export default function DashboardPage() {
+export function SidebarDemo() {
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const handleLogout = () => {
+    disconnect();
+    router.push('/');
+  };
+
+  const links = [
+    {
+      label: "Create",
+      href: "/home",
+      icon: (
+        <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Unlock",
+      href: "/unlock",
+      icon: (
+        <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Dashboard",
+      href: "/Dashboard",
+      icon: (
+        <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+    },
+    {
+      label: "Logout",
+      href: "#",
+      icon: (
+        <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+      ),
+      onClick: handleLogout,
+    },
+  ];
+
+  return (
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-1 flex-col overflow-hidden rounded-md border border-neutral-200 bg-gray-100 md:flex-row dark:border-neutral-700 dark:bg-neutral-800",
+        "h-screen"
+      )}
+    >
+      <Sidebar open={open} setOpen={setOpen}>
+        <SidebarBody className="justify-between gap-10">
+          <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+            {open ? <Logo /> : <LogoIcon />}
+            <div className="mt-12 flex flex-col gap-2">
+              {links.map((link, idx) => (
+                <SidebarLink key={idx} link={link} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <SidebarLink
+              link={{
+                label: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet",
+                href: "#",
+                icon: (
+                  <div className="h-7 w-7 shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {address ? address.slice(0, 2) : "W"}
+                  </div>
+                ),
+              }}
+            />
+          </div>
+        </SidebarBody>
+      </Sidebar>
+      <DashboardContent />
+    </div>
+  );
+}
+
+export const Logo = () => {
+  return (
+    <a
+      href="#"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+    >
+      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-xl font-bold whitespace-pre text-black dark:text-white"
+      >
+        Future Protocol
+      </motion.span>
+    </a>
+  );
+};
+
+export const LogoIcon = () => {
+  return (
+    <a
+      href="#"
+      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+    >
+      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+    </a>
+  );
+};
+
+const DashboardContent = () => {
   const { address } = useAccount();
   const [capsules, setCapsules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -148,6 +267,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+export default function DashboardPage() {
+  return (
+    <div className="min-h-screen w-full">
+      <SidebarDemo />
     </div>
   );
 }
