@@ -1,6 +1,24 @@
-# FEVM Hardhat Kit
+# TimeCapsule IPFS Integration
 
-A comprehensive TypeScript-based Hardhat development kit for building smart contracts on the Filecoin EVM (FEVM). This kit includes example contracts, deployment scripts with verification support on blockscout-filfox explorers, and interactive tasks for contract interaction.
+A decentralized time-locked file storage system that combines Filecoin blockchain smart contracts with Lighthouse IPFS storage. This system allows users to store files on IPFS through Lighthouse and lock them with smart contracts until a specified time.
+
+## System Architecture
+
+```
+File → Lighthouse IPFS → CID → Smart Contract → Time-Locked Storage
+                                      ↓
+                              Blockchain Storage (Filecoin)
+```
+
+## Features
+
+- Upload files to decentralized IPFS storage via Lighthouse
+- Store IPFS CIDs in Filecoin smart contracts
+- Time-based access control for file unlocking
+- Comprehensive logging of all operations
+- Terminal-based interface (no frontend required)
+- Support for encrypted file storage
+- Automatic metadata tracking (file size, type, creation time, etc.)
 
 ## Cloning the Repo
 
@@ -31,59 +49,78 @@ This will clone the hardhat kit onto your computer, switch directories into the 
    PRIVATE_KEY=your_private_key_here
    ```
 
-**⚠️ Security Warning:** Never commit `.env` files containing private keys to version control. The `.env` file is already gitignored by default - do not remove it from `.gitignore`.
+**Security Warning:** Never commit `.env` files containing private keys to version control. The `.env` file is already gitignored by default - do not remove it from `.gitignore`.
 
 
-## Get the Deployer Address
+## Quick Start
 
-Run this command:
-```
-yarn hardhat get-address
-```
+### 1. Setup Environment
+```bash
+# Copy environment file
+cp .env.example .env
 
-This will show you the ethereum-style address associated with that private key and the filecoin-style f4 address (also known as t4 address on testnets)! The Ethereum address can now be exclusively used for almost all FEVM tools, including the faucet.
-
-
-## Fund the Deployer Address
-
-Go to the [Calibrationnet testnet faucet](https://faucet.calibnet.chainsafe-fil.io/funds.html), and paste in the Ethereum address from the previous step. This will send some calibration testnet FIL to the account.
-
-
-## Deploy the Contracts
-
-Currently the kit deploys 4 main contracts:
-
-* **SimpleCoin**: A basic ERC20-style token contract demonstrating simple Solidity functionality
-* **FilecoinMarketConsumer**: A contract that demonstrates how to use Filecoin APIs to access storage deal data
-* **DealRewarder**: A bounty contract for incentivizing data storage on Filecoin
-* **DealClient**: A contract that creates Filecoin storage deals within Solidity smart contracts
-
-Type in the following command in the terminal to deploy all contracts:
-
- ```
-yarn hardhat deploy
+# Edit .env and add:
+# LIGHTHOUSE_API_KEY=your_lighthouse_api_key_here
+# PRIVATE_KEY=your_wallet_private_key_here
 ```
 
-This will compile all the contracts in the contracts folder and deploy them to the Calibrationnet test network. The deployment script automatically attempts to verify contracts on both Blockscout and Filfox explorers. You can skip verification steps by setting these environment variables in your .env file:
-
-```
-IGNORE_FILFOX_VERIFICATION=true
-IGNORE_BLOCKSCOUT_VERIFICATION=true
+### 2. Install Dependencies
+```bash
+npm install
 ```
 
-Keep note of the deployed contract addresses for the next step.
-
-## Interact with the Contracts
-
-You can interact with contracts via hardhat tasks, found in the 'tasks' folder. The kit includes tasks for all deployed contracts. For example, to interact with the SimpleCoin contract:
-
-Type in the following command in the terminal:
-
- ```
-yarn hardhat get-balance --contract 'THE DEPLOYED CONTRACT ADDRESS HERE' --account 'YOUR ETHEREUM ADDRESS HERE'
+### 3. Deploy Contract
+```bash
+npm run compile
+npm run deploy
 ```
 
-The console should read that your account has 12000 SimpleCoin!
+### 4. Create Your First Time Capsule
+```bash
+# Create a test file
+echo "Hello from the past!" > message.txt
+
+# Create time capsule (unlock in 1 hour)
+npm run timecapsule create ./message.txt "My First Capsule" user@example.com "2025-09-27 22:00"
+```
+
+## Deployed Contract
+
+**TimeCapsuleStorage Contract**
+- Address: `0x29CbBF02aFa6B223109cd7256cf0D0C741f399d0`
+- Network: Filecoin Calibration Testnet
+- Explorer: [View on FilFox](https://calibration.filfox.info/en/address/0x29CbBF02aFa6B223109cd7256cf0D0C741f399d0)
+
+## Available Commands
+
+### Create Time Capsule
+```bash
+npm run timecapsule create <file_path> <title> <recipient_email> <unlock_date>
+
+# Example
+npm run timecapsule create ./secret.txt "Birthday Surprise" friend@email.com "2024-12-25 09:00"
+```
+
+### Unlock Time Capsule
+```bash
+npm run timecapsule unlock <capsule_id> [download_path]
+
+# Example  
+npm run timecapsule unlock 1 ./unlocked_file.txt
+```
+
+### View Capsule Details
+```bash
+npm run timecapsule details <capsule_id>
+
+# Example
+npm run timecapsule details 1
+```
+
+### Run Integration Test
+```bash
+npm run demo
+```
 
 ## Filecoin APIs
 
