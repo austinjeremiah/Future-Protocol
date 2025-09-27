@@ -1,0 +1,153 @@
+"use client";
+
+import React, { useState } from "react";
+import { useAccount } from "wagmi";
+import Link from "next/link";
+
+export default function DashboardPage() {
+  const { address } = useAccount();
+  const [capsules, setCapsules] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Mock stats - replace with real data
+  const stats = {
+    total: 0,
+    created: 0,
+    received: 0,
+    sealed: 0
+  };
+
+  const refreshCapsules = async () => {
+    setLoading(true);
+    // TODO: Implement actual capsule loading logic
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <div className="border-b border-gray-800 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="text-emerald-500 font-bold text-xl mr-4">TONE</div>
+            <Link 
+              href="/home" 
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Title Section */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">Time Capsule Dashboard</h1>
+            <p className="text-gray-400 mb-4">Manage and view your encrypted time capsules</p>
+            <div className="text-sm text-gray-500">
+              Connected: <span className="text-emerald-500 font-mono">{address || 'Not connected'}</span>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+              <h3 className="text-gray-400 text-sm mb-2">Total Capsules</h3>
+              <div className="text-3xl font-bold text-emerald-500 mb-1">{stats.total}</div>
+            </div>
+            
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+              <h3 className="text-gray-400 text-sm mb-2">Created by You</h3>
+              <div className="text-3xl font-bold text-blue-500 mb-1">{stats.created}</div>
+              <div className="text-xs text-gray-500">Files you sent</div>
+            </div>
+            
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+              <h3 className="text-gray-400 text-sm mb-2">Sent to You</h3>
+              <div className="text-3xl font-bold text-emerald-500 mb-1">{stats.received}</div>
+              <div className="text-xs text-gray-500">Files you received</div>
+            </div>
+            
+            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 text-center">
+              <h3 className="text-gray-400 text-sm mb-2">Sealed</h3>
+              <div className="text-3xl font-bold text-yellow-500 mb-1">{stats.sealed}</div>
+              <div className="text-xs text-emerald-500">Server: online</div>
+            </div>
+          </div>
+
+          {/* Your Time Capsules Section */}
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Your Time Capsules</h2>
+              <button
+                onClick={refreshCapsules}
+                disabled={loading}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+              >
+                {loading ? (
+                  <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                )}
+                Refresh Capsules
+              </button>
+            </div>
+
+            <div className="border border-gray-600 rounded-lg p-4 mb-4">
+              <div className="text-gray-300 text-sm mb-2">
+                Loading capsules for: <span className="font-mono text-emerald-500">{address ? `${address.slice(0, 10)}...${address.slice(-8)}` : 'Not connected'}</span>
+              </div>
+              <div className="text-gray-500 text-sm">
+                This will show all capsules you created or received
+              </div>
+            </div>
+          </div>
+
+          {/* Second Time Capsules Section */}
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-white mb-6">Your Time Capsules</h2>
+            
+            <div className="flex flex-col items-center justify-center py-12">
+              {/* Empty State Icon */}
+              <div className="w-16 h-16 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+              </div>
+              
+              <h3 className="text-lg font-semibold text-white mb-2">No time capsules found</h3>
+              <p className="text-gray-400 text-center max-w-md">
+                You haven't created or received any time capsules yet. 
+                Create your first capsule to preserve memories for the future.
+              </p>
+              
+              <div className="flex gap-4 mt-6">
+                <Link
+                  href="/home"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Create Capsule
+                </Link>
+                <Link
+                  href="/unlock"
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+                >
+                  Unlock Capsule
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
