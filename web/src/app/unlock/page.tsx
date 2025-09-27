@@ -12,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { TimeCapsuleService } from "@/lib/services/timecapsule";
 
 export function SidebarDemo() {
   const { address, isConnected } = useAccount();
@@ -125,19 +126,63 @@ export const LogoIcon = () => {
 const UnlockContent = () => {
   const { address } = useAccount();
   const [formData, setFormData] = useState({
-    fileId: '',
+    capsuleId: '',
     privateKey: ''
   });
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockResult, setUnlockResult] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+    content?: string;
+  }>({ type: null, message: '' });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleUnlock = () => {
-    // TODO: Implement unlock logic
-    console.log('Unlocking time capsule with data:', formData);
-    alert('Time capsule unlock functionality will be implemented soon!');
+  const handleUnlock = async () => {
+    if (!address) {
+      setUnlockResult({ type: 'error', message: 'Please connect your wallet first' });
+      return;
+    }
+
+    if (!formData.capsuleId) {
+      setUnlockResult({ type: 'error', message: 'Please enter a capsule ID' });
+      return;
+    }
+
+    const capsuleId = parseInt(formData.capsuleId);
+    if (isNaN(capsuleId) || capsuleId <= 0) {
+      setUnlockResult({ type: 'error', message: 'Please enter a valid capsule ID (number)' });
+      return;
+    }
+
+    setIsUnlocking(true);
+    setUnlockResult({ type: null, message: '' });
+
+    try {
+      const timeCapsuleService = new TimeCapsuleService();
+      
+      console.log(`Attempting to unlock capsule ${capsuleId}...`);
+      
+      const result = await timeCapsuleService.unlockTimeCapsule(capsuleId);
+
+      setUnlockResult({
+        type: 'success',
+        message: `Time capsule unlocked successfully! ${result.txHash ? `Transaction: ${result.txHash}` : ''}`,
+        content: result.content
+      });
+
+    } catch (error: any) {
+      console.error('Error unlocking time capsule:', error);
+      setUnlockResult({
+        type: 'error',
+        message: `Failed to unlock time capsule: ${error.message || 'Unknown error'}`
+      });
+    } finally {
+      setIsUnlocking(false);
+    }
   };
 
   return (
@@ -157,21 +202,21 @@ const UnlockContent = () => {
               </div>
 
               <div className="space-y-6">
-                {/* File ID */}
+                {/* Capsule ID */}
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    File ID <span className="text-red-500">*</span>
+                    Capsule ID <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
-                    name="fileId"
-                    value={formData.fileId}
+                    type="number"
+                    name="capsuleId"
+                    value={formData.capsuleId}
                     onChange={handleInputChange}
-                    placeholder="Enter file ID (bytes32 format)"
+                    placeholder="Enter capsule ID (e.g., 1, 2, 3...)"
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                   />
                   <p className="text-sm text-gray-400 mt-1">
-                    This is the unique file ID (bytes32) from the blockchain contract
+                    This is the unique capsule ID from when the time capsule was created
                   </p>
                 </div>
 
@@ -194,37 +239,57 @@ const UnlockContent = () => {
                   </div>
                 </div>
 
-                {/* Private Key */}
-                <div>
-                  <label className="flex items-center text-sm font-medium text-white mb-2">
-                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31.84 2.41 2 2.83V23h2v-3.17c1.16-.41 2-1.51 2-2.83 0-1.66-1.34-3-3-3zm13-9v4c0 1.1-.9 2-2 2h-1v2c0 1.1-.9 2-2 2H9c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2h1V4c0-2.76 2.24-5 5-5s5 2.24 5 5v2h1c1.1 0 2 .9 2 2zM12 4c-1.66 0-3 1.34-3 3v2h6V7c0-1.66-1.34-3-3-3z"/>
-                    </svg>
-                    Private Key <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="privateKey"
-                    value={formData.privateKey}
-                    onChange={handleInputChange}
-                    placeholder="Paste your private key here..."
-                    rows={4}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none font-mono text-sm"
-                  />
-                  <p className="text-sm text-gray-400 mt-1">
-                    This is the private key you received when creating the capsule
-                  </p>
-                </div>
+                {/* Status Messages */}
+                {unlockResult.type && (
+                  <div className={`p-4 rounded-lg ${
+                    unlockResult.type === 'success' 
+                      ? 'bg-green-900/50 border border-green-500 text-green-300' 
+                      : 'bg-red-900/50 border border-red-500 text-red-300'
+                  }`}>
+                    <div className="flex items-center">
+                      {unlockResult.type === 'success' ? (
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      <div>
+                        <span className="text-sm font-medium">{unlockResult.message}</span>
+                        {unlockResult.content && (
+                          <div className="mt-2 p-3 bg-gray-800 rounded border text-gray-300 text-sm whitespace-pre-wrap max-h-40 overflow-y-auto">
+                            {unlockResult.content}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Unlock Button */}
                 <button
                   onClick={handleUnlock}
-                  disabled={!formData.fileId || !formData.privateKey || !address}
+                  disabled={!formData.capsuleId || !address || isUnlocking}
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none shadow-lg flex items-center justify-center"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/>
-                  </svg>
-                  Unlock Time Capsule
+                  {isUnlocking ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Unlocking...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM15.1 8H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/>
+                      </svg>
+                      Unlock Time Capsule
+                    </>
+                  )}
                 </button>
 
                 {/* Security Notice */}

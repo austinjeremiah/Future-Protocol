@@ -15,7 +15,7 @@ import QRCode from "qrcode";
 // Load environment variables
 dotenv.config();
 // Also load Self Protocol specific configuration
-dotenv.config({ path: path.join(__dirname, '..', '.env.self') });
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 interface SelfProtocolVerificationResult {
     verified: boolean;

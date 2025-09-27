@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Web3Provider } from "./providers/Web3Provider";
+import { NetworkStatus } from "@/components/NetworkStatus";
+import { NetworkSetupGuide } from "@/components/NetworkSetupGuide";
+import { SetupChecker } from "@/components/SetupChecker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +32,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Web3Provider>
+          <NetworkStatus />
+          <NetworkSetupGuide />
+          <SetupChecker />
           {children}
         </Web3Provider>
       </body>

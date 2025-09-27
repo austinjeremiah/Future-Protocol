@@ -13,6 +13,9 @@ import {
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { TimeCapsuleService } from "@/lib/services/timecapsule";
+import { TimeCapsule } from "@/lib/types";
+import { useEffect } from "react";
 
 export function SidebarDemo() {
   const { address, isConnected } = useAccount();
@@ -125,24 +128,45 @@ export const LogoIcon = () => {
 
 const DashboardContent = () => {
   const { address } = useAccount();
-  const [capsules, setCapsules] = useState([]);
+  const [capsules, setCapsules] = useState<TimeCapsule[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock stats - replace with real data
+  const timeCapsuleService = new TimeCapsuleService();
+
+  // Calculate stats from actual capsules
   const stats = {
-    total: 0,
-    created: 0,
-    received: 0,
-    sealed: 0
+    total: capsules.length,
+    created: capsules.filter(c => c.creator.toLowerCase() === address?.toLowerCase()).length,
+    received: capsules.filter(c => c.recipient.toLowerCase() === address?.toLowerCase()).length,
+    sealed: capsules.filter(c => !c.isUnlocked).length
   };
 
   const refreshCapsules = async () => {
+    if (!address) return;
+
     setLoading(true);
-    // TODO: Implement actual capsule loading logic
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      console.log('Loading time capsules...');
+      const userCapsules = await timeCapsuleService.getUserTimeCapsules();
+      setCapsules(userCapsules);
+      console.log(`Loaded ${userCapsules.length} time capsules`);
+    } catch (error: any) {
+      console.error('Error loading time capsules:', error);
+      setError(`Failed to load time capsules: ${error.message}`);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
+
+  // Load capsules when component mounts or address changes
+  useEffect(() => {
+    if (address) {
+      refreshCapsules();
+    }
+  }, [address]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -231,39 +255,124 @@ const DashboardContent = () => {
             </div>
           </div>
 
-          {/* Second Time Capsules Section */}
+          {/* Time Capsules List */}
           <div className="bg-gray-900 border border-gray-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-6">Your Time Capsules</h2>
+            <h2 className="text-xl font-bold text-white mb-6">Time Capsules</h2>
             
-            <div className="flex flex-col items-center justify-center py-12">
-              {/* Empty State Icon */}
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+            {error && (
+              <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-6">
+                <div className="text-red-400 font-medium">Error Loading Capsules</div>
+                <div className="text-red-300 text-sm mt-1">{error}</div>
               </div>
-              
-              <h3 className="text-lg font-semibold text-white mb-2">No time capsules found</h3>
-              <p className="text-gray-400 text-center max-w-md">
-                You haven't created or received any time capsules yet. 
-                Create your first capsule to preserve memories for the future.
-              </p>
-              
-              <div className="flex gap-4 mt-6">
-                <Link
-                  href="/home"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors"
-                >
-                  Create Capsule
-                </Link>
-                <Link
-                  href="/unlock"
-                  className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
-                >
-                  Unlock Capsule
-                </Link>
+            )}
+
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                <span className="ml-3 text-gray-400">Loading time capsules...</span>
               </div>
-            </div>
+            ) : capsules.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                {/* Empty State Icon */}
+                <div className="w-16 h-16 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+                
+                <h3 className="text-lg font-semibold text-white mb-2">No time capsules found</h3>
+                <p className="text-gray-400 text-center max-w-md">
+                  You haven't created or received any time capsules yet. 
+                  Create your first capsule to preserve memories for the future.
+                </p>
+                
+                <div className="flex gap-4 mt-6">
+                  <Link
+                    href="/home"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Create Capsule
+                  </Link>
+                  <Link
+                    href="/unlock"
+                    className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+                  >
+                    Unlock Capsule
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {capsules.map((capsule) => (
+                  <div key={capsule.id} className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-emerald-500 font-mono text-sm">#{capsule.id}</span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          capsule.isUnlocked 
+                            ? 'bg-green-900 text-green-300' 
+                            : new Date() >= new Date(capsule.unlockTime)
+                            ? 'bg-yellow-900 text-yellow-300'
+                            : 'bg-blue-900 text-blue-300'
+                        }`}>
+                          {capsule.isUnlocked 
+                            ? 'Unlocked' 
+                            : new Date() >= new Date(capsule.unlockTime)
+                            ? 'Ready to Unlock'
+                            : 'Sealed'
+                          }
+                        </span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          capsule.creator.toLowerCase() === address?.toLowerCase()
+                            ? 'bg-purple-900 text-purple-300'
+                            : 'bg-orange-900 text-orange-300'
+                        }`}>
+                          {capsule.creator.toLowerCase() === address?.toLowerCase() ? 'Created' : 'Received'}
+                        </span>
+                      </div>
+                      <div className="text-gray-400 text-xs">
+                        {new Date(capsule.unlockTime).toLocaleDateString()}
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-300 mb-2">
+                      <strong>From:</strong> 
+                      <span className="font-mono ml-1 text-emerald-400">
+                        {capsule.creator.slice(0, 6)}...{capsule.creator.slice(-4)}
+                      </span>
+                    </div>
+                    
+                    <div className="text-sm text-gray-300 mb-2">
+                      <strong>To:</strong> 
+                      <span className="font-mono ml-1 text-blue-400">
+                        {capsule.recipient.slice(0, 6)}...{capsule.recipient.slice(-4)}
+                      </span>
+                    </div>
+
+                    {capsule.contentHash && (
+                      <div className="text-xs text-gray-500 mt-2">
+                        <strong>IPFS Hash:</strong> 
+                        <span className="font-mono ml-1">{capsule.contentHash.slice(0, 20)}...</span>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="text-xs text-gray-500">
+                        Unlock: {new Date(capsule.unlockTime).toLocaleString()}
+                      </div>
+                      {!capsule.isUnlocked && new Date() >= new Date(capsule.unlockTime) && (
+                        <Link
+                          href={`/unlock?id=${capsule.id}`}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                        >
+                          Unlock Now
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
