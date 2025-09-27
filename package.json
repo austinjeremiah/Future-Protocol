@@ -29,10 +29,11 @@
     "@typechain/ethers-v6": "^0.5.0",
     "@typechain/hardhat": "^9.0.0",
     "@types/mocha": ">=9.1.0",
-    "axios": "^1.7.7",
+    "axios": "^1.12.2",
     "blocklock-js": "^1.0.0",
     "blocklock-solidity": "^0.0.13",
     "chai": "^4.3.6",
+    "circomlib": "^2.0.5",
     "dotenv": "^16.0.3",
     "envfile": "^6.18.0",
     "ethers": "^6.13.2",
@@ -41,15 +42,21 @@
     "hardhat": "^2.26.0",
     "hardhat-deploy-ethers": "^0.4.1",
     "hardhat-gas-reporter": "^1.0.8",
+    "jsrsasign": "^11.1.0",
+    "node-forge": "^1.3.1",
+    "snarkjs": "^0.7.5",
     "solidity-coverage": "^0.8.1",
+    "tlsn-js": "^0.1.0-alpha.12.0",
     "ts-node": "^10.9.2",
     "typechain": "^8.3.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "ws": "^8.18.3"
   },
   "mocha": {
     "timeout": 10000000
   },
   "devDependencies": {
+    "@types/node-forge": "^1.3.14",
     "hardhat-deploy": "^0.12.4"
   }
 }
