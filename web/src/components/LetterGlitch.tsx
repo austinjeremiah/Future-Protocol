@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef, useEffect } from 'react';
 
 const LetterGlitch = ({
@@ -8,12 +10,12 @@ const LetterGlitch = ({
   smooth = true,
   characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$&*()-_+=/[]{};:<>.,0123456789'
 }: {
-  glitchColors: string[];
-  glitchSpeed: number;
-  centerVignette: boolean;
-  outerVignette: boolean;
-  smooth: boolean;
-  characters: string;
+  glitchColors?: string[];
+  glitchSpeed?: number;
+  centerVignette?: boolean;
+  outerVignette?: boolean;
+  smooth?: boolean;
+  characters?: string;
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -235,7 +237,7 @@ const LetterGlitch = ({
     width: '100%',
     height: '100%',
     pointerEvents: 'none',
-    background: 'radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 100%)'
+    background: 'radial-gradient(circle, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)'
   };
 
   const centerVignetteStyle = {
@@ -245,7 +247,7 @@ const LetterGlitch = ({
     width: '100%',
     height: '100%',
     pointerEvents: 'none',
-    background: 'radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%)'
+    background: 'radial-gradient(circle, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 60%)'
   };
 
   return (
