@@ -1,0 +1,38 @@
+BLOCKLOCK-ENCRYPTED TIMECAPSULE
+================================
+
+Title: Integrated Blocklock Demo
+Created: 2025-09-27T03:45:59.647Z
+Unlock Date: 2025-09-27T03:50:59.647Z
+Creator: 0xe01Add0c3640a8314132bAF491d101A38ffEF4f0
+
+MESSAGE:
+========
+This is a demonstration of the complete integrated Blocklock TimeCapsule system.
+
+The file you are reading was:
+1. Created with this message
+2. Encrypted using Blocklock time-locked encryption
+3. Stored on IPFS in encrypted form
+4. Registered in a smart contract
+5. Will be automatically decrypted at unlock time
+
+This represents the future of secure, time-locked, decentralized storage!
+
+Created at: 2025-09-27T03:45:59.647Z
+
+TECHNICAL INFO:
+===============
+- This file was encrypted using Blocklock time-locked encryption
+- The encryption key is locked until the specified unlock time
+- File is stored on IPFS for decentralized access
+- Smart contract manages the unlock process
+- Automatic decryption occurs at unlock time
+
+This demonstrates the complete integration of:
+1. Blocklock time-locked encryption
+2. IPFS decentralized storage  
+3. Smart contract automation
+4. Seamless user experience
+
+End of TimeCapsule message.
