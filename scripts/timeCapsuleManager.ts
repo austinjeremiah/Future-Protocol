@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
-import { Wallet } from "ethers";
+import { getBytes, Signer, Wallet } from "ethers";
+import { Blocklock, encodeCiphertextToSolidity, encodeCondition, encodeParams } from "blocklock-js";
 import { TimeCapsuleBlocklockSimple } from "../typechain-types";
 import { LighthouseService } from "./LighthouseService";
 import fs from "fs";
@@ -15,6 +16,7 @@ export class TimeCapsuleManager {
     private lighthouseService!: LighthouseService;
     private rl!: readline.Interface;
     private senderAddress!: string;
+    private blocklock!: Blocklock;
 
     async initialize(): Promise<void> {
         console.log("Initializing TimeCapsule Manager...");
@@ -34,6 +36,11 @@ export class TimeCapsuleManager {
         ) as TimeCapsuleBlocklockSimple;
         
         this.lighthouseService = new LighthouseService(process.env.LIGHTHOUSE_API_KEY!);
+        try {
+            this.blocklock = Blocklock.createBaseSepolia(this.signer as unknown as Signer);
+        } catch (error) {
+            console.log("Blocklock initialization failed, using simplified encryption");
+        }
         
         this.rl = readline.createInterface({
             input: process.stdin,
@@ -109,29 +116,30 @@ export class TimeCapsuleManager {
             return;
         }
         
-        console.log("\nUnlock Time Options:");
-        console.log("1. 1 hour from now");
-        console.log("2. 6 hours from now");
-        console.log("3. 24 hours from now");
-        console.log("4. 7 days from now");
-        console.log("5. Custom (specify hours)");
+        console.log("\nUnlock Block Options:");
+        console.log("1. 10 blocks from now");
+        console.log("2. 50 blocks from now");
+        console.log("3. 100 blocks from now");
+        console.log("4. 500 blocks from now");
+        console.log("5. Custom block count");
         
-        const timeOption = await this.question("Select option (1-5): ");
+        const blockOption = await this.question("Select option (1-5): ");
         
-        let unlockHours: number;
-        switch (timeOption) {
-            case '1': unlockHours = 1; break;
-            case '2': unlockHours = 6; break;
-            case '3': unlockHours = 24; break;
-            case '4': unlockHours = 168; break;
+        let unlockBlocks: number;
+        switch (blockOption) {
+            case '1': unlockBlocks = 10; break;
+            case '2': unlockBlocks = 50; break;
+            case '3': unlockBlocks = 100; break;
+            case '4': unlockBlocks = 500; break;
             case '5':
-                const customHours = await this.question("Enter hours from now: ");
-                unlockHours = parseInt(customHours) || 1;
+                const customBlocks = await this.question("Enter blocks from now: ");
+                unlockBlocks = parseInt(customBlocks) || 10;
                 break;
-            default: unlockHours = 1;
+            default: unlockBlocks = 10;
         }
         
-        const unlockTime = Math.floor(Date.now() / 1000) + (unlockHours * 3600);
+        const currentBlock = await ethers.provider.getBlockNumber();
+        const targetBlock = BigInt(currentBlock + unlockBlocks);
         
         const messageContent = `TIMECAPSULE MESSAGE
 =====================
@@ -140,7 +148,8 @@ Title: ${title}
 From: ${this.senderAddress}
 To: ${recipientAddress}
 Created: ${new Date().toISOString()}
-Unlock Time: ${new Date(unlockTime * 1000).toISOString()}
+Target Block: ${targetBlock}
+Current Block: ${currentBlock}
 
 MESSAGE CONTENT:
 ================
@@ -153,34 +162,46 @@ File stored on IPFS via Lighthouse for decentralized storage.
 Smart contract manages unlock conditions and access control.`;
 
         console.log("\nProcessing TimeCapsule...");
-        console.log("Step 1: Preparing content file...");
+        console.log("Step 1: Encrypting message with Blocklock...");
         
-        const tempFilePath = path.join(__dirname, "..", `timecapsule_${Date.now()}.txt`);
-        fs.writeFileSync(tempFilePath, messageContent);
+        const messageBytes = ethers.toUtf8Bytes(messageContent);
+        const cipherMessage = this.blocklock.encrypt(messageBytes, targetBlock);
+        const encodedCiphertext = encodeCiphertextToSolidity(cipherMessage);
         
-        console.log("Step 2: Uploading to IPFS via Lighthouse...");
+        console.log("Step 2: Creating encrypted file...");
+        const tempFilePath = path.join(__dirname, "..", `encrypted_timecapsule_${Date.now()}.bin`);
+        const ciphertextHex = typeof encodedCiphertext === 'string' ? encodedCiphertext : ethers.hexlify(encodedCiphertext);
+        fs.writeFileSync(tempFilePath, Buffer.from(ciphertextHex.slice(2), 'hex'));
+        
+        console.log("Step 3: Uploading encrypted file to IPFS...");
         const uploadResult = await this.lighthouseService.uploadFile(tempFilePath);
         console.log(`IPFS Upload Complete: ${uploadResult.Hash}`);
         
-        console.log("Step 3: Creating on-chain TimeCapsule with Blocklock...");
+        console.log("Step 4: Creating on-chain TimeCapsule with Blocklock...");
         
-        const conditionBytes = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["uint256"],
-            [unlockTime]
-        );
+        const conditionBytes = encodeCondition(targetBlock);
+        const callbackGasLimit = 700000n;
+        const [requestPrice] = await this.blocklock.calculateRequestPriceNative(callbackGasLimit);
         
-        const ciphertextBytes = ethers.toUtf8Bytes("blocklock_encrypted_content");
+        console.log(`Target block: ${targetBlock}`);
+        console.log(`Callback gas limit: ${callbackGasLimit}`);
+        console.log(`Request price: ${ethers.formatEther(requestPrice)} ETH`);
+        
+        const balance = await ethers.provider.getBalance(this.senderAddress);
+        if (balance < requestPrice) {
+            throw new Error(`Insufficient balance. Need ${ethers.formatEther(requestPrice)} ETH`);
+        }
         
         const tx = await this.blocklockContract.createTimelockRequestWithDirectFunding(
             uploadResult.Hash,
-            300000,
+            callbackGasLimit,
             conditionBytes,
-            ciphertextBytes,
+            ciphertextHex,
             `${recipientAddress}@wallet.address`,
             title,
-            messageContent.length,
-            "text/plain",
-            { value: ethers.parseEther("0.01") }
+            Buffer.from(ciphertextHex.slice(2), 'hex').length,
+            "application/octet-stream",
+            { value: requestPrice }
         );
         
         console.log(`Transaction submitted: ${tx.hash}`);
@@ -197,7 +218,7 @@ Smart contract manages unlock conditions and access control.`;
             console.log(`IPFS CID: ${uploadResult.Hash}`);
             console.log(`Transaction: ${receipt.hash}`);
             console.log(`Block: ${receipt.blockNumber}`);
-            console.log(`Unlock Time: ${new Date(unlockTime * 1000).toISOString()}`);
+            console.log(`Target Block: ${targetBlock}`);
             console.log(`Gas Used: ${receipt.gasUsed}`);
             console.log("=".repeat(50));
         }
@@ -342,22 +363,61 @@ Smart contract manages unlock conditions and access control.`;
         console.log("\nRetrieving TimeCapsule content...");
         console.log(`Downloading from IPFS: ${ipfsCid}`);
         
-        const downloadPath = path.join(__dirname, "..", `retrieved_${capsuleId}_${Date.now()}.txt`);
+        const downloadPath = path.join(__dirname, "..", `retrieved_${capsuleId}_${Date.now()}.bin`);
         
         try {
             await this.lighthouseService.downloadFile(ipfsCid, downloadPath);
             
             if (fs.existsSync(downloadPath)) {
-                const content = fs.readFileSync(downloadPath, 'utf8');
+                console.log("Step 1: Downloaded encrypted file from IPFS");
                 
-                console.log("\n" + "=".repeat(80));
-                console.log("TIMECAPSULE CONTENT RETRIEVED");
-                console.log("=".repeat(80));
-                console.log(content);
-                console.log("=".repeat(80));
+                const details = await this.blocklockContract.getTimeCapsule(capsuleId);
+                const hasDecryptionKey = details[10];
+                
+                if (hasDecryptionKey) {
+                    console.log("Step 2: Decryption key available, decrypting content...");
+                    
+                    try {
+                        const encryptedData = fs.readFileSync(downloadPath);
+                        const encryptedHex = "0x" + encryptedData.toString('hex');
+                        
+                        const decryptionKey = details[9];
+                        const decryptedBytes = await this.blocklock.decrypt(encryptedHex, decryptionKey);
+                        const decryptedContent = ethers.toUtf8String(decryptedBytes);
+                        
+                        console.log("\n" + "=".repeat(80));
+                        console.log("TIMECAPSULE CONTENT DECRYPTED");
+                        console.log("=".repeat(80));
+                        console.log(decryptedContent);
+                        console.log("=".repeat(80));
+                        
+                        console.log("Content successfully decrypted and displayed.");
+                    } catch (decryptError) {
+                        console.log("Error decrypting content:", decryptError);
+                        console.log("Content may still be time-locked or decryption key not available");
+                        
+                        const encryptedData = fs.readFileSync(downloadPath);
+                        console.log("\n" + "=".repeat(80));
+                        console.log("ENCRYPTED TIMECAPSULE CONTENT");
+                        console.log("=".repeat(80));
+                        console.log("Encrypted data size:", encryptedData.length, "bytes");
+                        console.log("Hex preview:", encryptedData.toString('hex').slice(0, 100) + "...");
+                        console.log("=".repeat(80));
+                    }
+                } else {
+                    console.log("Step 2: Decryption key not yet available");
+                    
+                    const encryptedData = fs.readFileSync(downloadPath);
+                    console.log("\n" + "=".repeat(80));
+                    console.log("ENCRYPTED TIMECAPSULE CONTENT");
+                    console.log("=".repeat(80));
+                    console.log("Content is still time-locked");
+                    console.log("Encrypted data size:", encryptedData.length, "bytes");
+                    console.log("Wait for unlock time to access decrypted content");
+                    console.log("=".repeat(80));
+                }
                 
                 fs.unlinkSync(downloadPath);
-                console.log("Content successfully retrieved and displayed.");
             } else {
                 throw new Error("File download failed");
             }
