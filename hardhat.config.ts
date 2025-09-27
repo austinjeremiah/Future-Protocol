@@ -21,7 +21,7 @@ const config: HardhatUserConfig = {
                 // https://docs.soliditylang.org/en/latest/using-the-compiler.html#optimizer-options
                 runs: 1000,
             },
-            viaIR: false,
+            viaIR: true,
         },
     },
     defaultNetwork: "calibration",

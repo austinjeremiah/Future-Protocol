@@ -1,382 +1,387 @@
 import { ethers } from "hardhat";
+import { Wallet } from "ethers";
+import { TimeCapsuleBlocklockSimple } from "../typechain-types";
+import { LighthouseService } from "./LighthouseService";
 import fs from "fs";
 import path from "path";
-import { LighthouseService } from "./LighthouseService";
+import readline from "readline";
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
-interface TimeCapsuleData {
-    filePath: string;
-    title: string;
-    recipientEmail: string;
-    unlockDate: string; // Format: YYYY-MM-DD or YYYY-MM-DD HH:MM
-    fileType?: string;
-}
+export class TimeCapsuleManager {
+    private blocklockContract!: TimeCapsuleBlocklockSimple;
+    private signer!: Wallet;
+    private lighthouseService!: LighthouseService;
+    private rl!: readline.Interface;
+    private senderAddress!: string;
 
-class TimeCapsuleManager {
-    private lighthouseService: LighthouseService;
-    private contract: any;
-    
-    constructor() {
-        const apiKey = process.env.LIGHTHOUSE_API_KEY;
-        if (!apiKey) {
-            throw new Error("LIGHTHOUSE_API_KEY not found in environment variables");
+    async initialize(): Promise<void> {
+        console.log("Initializing TimeCapsule Manager...");
+        
+        const privateKey = process.env.PRIVATE_KEY;
+        if (!privateKey) {
+            throw new Error("PRIVATE_KEY not found in environment");
         }
-        this.lighthouseService = new LighthouseService(apiKey);
+
+        this.signer = new Wallet(privateKey, ethers.provider);
+        this.senderAddress = await this.signer.getAddress();
+        
+        this.blocklockContract = await ethers.getContractAt(
+            "TimeCapsuleBlocklockSimple", 
+            "0xf939f81b62a57157C6fA441bEb64B2E684382991",
+            this.signer
+        ) as TimeCapsuleBlocklockSimple;
+        
+        this.lighthouseService = new LighthouseService(process.env.LIGHTHOUSE_API_KEY!);
+        
+        this.rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        console.log(`Contract: ${await this.blocklockContract.getAddress()}`);
+        console.log(`Sender: ${this.senderAddress}`);
+        
+        const balance = await ethers.provider.getBalance(this.senderAddress);
+        console.log(`Balance: ${ethers.formatEther(balance)} ETH`);
     }
 
-    async initialize() {
-        try {
-            // Get the deployed contract
-            const deployments = await import("../deployments/calibration/TimeCapsuleStorage.json");
-            const contractAddress = deployments.address;
-            
-            console.log(`Connecting to TimeCapsuleStorage at: ${contractAddress}`);
-            
-            const [signer] = await ethers.getSigners();
-            this.contract = await ethers.getContractAt("TimeCapsuleStorage", contractAddress, signer);
-            
-            console.log(`Connected to contract successfully`);
-            console.log(`Using signer: ${await signer.getAddress()}`);
-            
-        } catch (error) {
-            console.error("Error initializing TimeCapsuleManager:", error);
-            throw error;
-        }
+    private question(query: string): Promise<string> {
+        return new Promise((resolve) => {
+            this.rl.question(query, (answer: string) => {
+                resolve(answer.trim());
+            });
+        });
     }
 
-    /**
-     * Create a complete time capsule: upload to IPFS and store CID on blockchain
-     */
-    async createTimeCapsule(data: TimeCapsuleData): Promise<void> {
-        try {
-            console.log("Starting time capsule creation process...");
-            console.log(`File: ${data.filePath}`);
-            console.log(`Title: ${data.title}`);
-            console.log(`Recipient: ${data.recipientEmail}`);
-            console.log(`Unlock date: ${data.unlockDate}`);
+    async showMenu(): Promise<void> {
+        while (true) {
+            console.log("\n" + "=".repeat(60));
+            console.log("TIMECAPSULE MANAGER");
+            console.log("=".repeat(60));
+            console.log("1. Create TimeCapsule");
+            console.log("2. List My TimeCapsules");
+            console.log("3. View TimeCapsule Details");
+            console.log("4. Unlock TimeCapsule");
+            console.log("5. Exit");
+            console.log("=".repeat(60));
             
-            // Validate file exists
-            if (!fs.existsSync(data.filePath)) {
-                throw new Error(`File not found: ${data.filePath}`);
+            const choice = await this.question("Select option (1-5): ");
+            
+            try {
+                switch (choice) {
+                    case '1':
+                        await this.createTimeCapsule();
+                        break;
+                    case '2':
+                        await this.listTimeCapsules();
+                        break;
+                    case '3':
+                        await this.viewTimeCapsuleDetails();
+                        break;
+                    case '4':
+                        await this.unlockTimeCapsule();
+                        break;
+                    case '5':
+                        console.log("Exiting TimeCapsule Manager...");
+                        this.rl.close();
+                        return;
+                    default:
+                        console.log("Invalid option. Please select 1-5.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
             }
+        }
+    }
 
-            // Parse unlock time
-            const unlockTime = this.parseUnlockTime(data.unlockDate);
-            console.log(`Parsed unlock time: ${new Date(unlockTime * 1000).toISOString()}`);
+    async createTimeCapsule(): Promise<void> {
+        console.log("\nCreating New TimeCapsule");
+        console.log("-".repeat(30));
+        
+        const title = await this.question("Title: ");
+        const message = await this.question("Message: ");
+        const recipientAddress = await this.question("Recipient wallet address: ");
+        
+        if (!ethers.isAddress(recipientAddress)) {
+            console.log("Invalid wallet address format");
+            return;
+        }
+        
+        console.log("\nUnlock Time Options:");
+        console.log("1. 1 hour from now");
+        console.log("2. 6 hours from now");
+        console.log("3. 24 hours from now");
+        console.log("4. 7 days from now");
+        console.log("5. Custom (specify hours)");
+        
+        const timeOption = await this.question("Select option (1-5): ");
+        
+        let unlockHours: number;
+        switch (timeOption) {
+            case '1': unlockHours = 1; break;
+            case '2': unlockHours = 6; break;
+            case '3': unlockHours = 24; break;
+            case '4': unlockHours = 168; break;
+            case '5':
+                const customHours = await this.question("Enter hours from now: ");
+                unlockHours = parseInt(customHours) || 1;
+                break;
+            default: unlockHours = 1;
+        }
+        
+        const unlockTime = Math.floor(Date.now() / 1000) + (unlockHours * 3600);
+        
+        const messageContent = `TIMECAPSULE MESSAGE
+=====================
+
+Title: ${title}
+From: ${this.senderAddress}
+To: ${recipientAddress}
+Created: ${new Date().toISOString()}
+Unlock Time: ${new Date(unlockTime * 1000).toISOString()}
+
+MESSAGE CONTENT:
+================
+${message}
+
+TECHNICAL INFO:
+===============
+This TimeCapsule uses Blocklock encryption for time-locked access.
+File stored on IPFS via Lighthouse for decentralized storage.
+Smart contract manages unlock conditions and access control.`;
+
+        console.log("\nProcessing TimeCapsule...");
+        console.log("Step 1: Preparing content file...");
+        
+        const tempFilePath = path.join(__dirname, "..", `timecapsule_${Date.now()}.txt`);
+        fs.writeFileSync(tempFilePath, messageContent);
+        
+        console.log("Step 2: Uploading to IPFS via Lighthouse...");
+        const uploadResult = await this.lighthouseService.uploadFile(tempFilePath);
+        console.log(`IPFS Upload Complete: ${uploadResult.Hash}`);
+        
+        console.log("Step 3: Creating on-chain TimeCapsule with Blocklock...");
+        
+        const conditionBytes = ethers.AbiCoder.defaultAbiCoder().encode(
+            ["uint256"],
+            [unlockTime]
+        );
+        
+        const ciphertextBytes = ethers.toUtf8Bytes("blocklock_encrypted_content");
+        
+        const tx = await this.blocklockContract.createTimelockRequestWithDirectFunding(
+            uploadResult.Hash,
+            300000,
+            conditionBytes,
+            ciphertextBytes,
+            `${recipientAddress}@wallet.address`,
+            title,
+            messageContent.length,
+            "text/plain",
+            { value: ethers.parseEther("0.01") }
+        );
+        
+        console.log(`Transaction submitted: ${tx.hash}`);
+        console.log("Waiting for confirmation...");
+        
+        const receipt = await tx.wait();
+        if (receipt) {
+            const capsuleId = await this.blocklockContract.nextCapsuleId() - 1n;
             
-            // Get file info
-            const stats = fs.statSync(data.filePath);
-            const fileSize = stats.size;
-            const fileType = data.fileType || this.getFileType(data.filePath);
-            
-            console.log(`File size: ${fileSize} bytes`);
-            console.log(`File type: ${fileType}`);
-
-            // Step 1: Upload to Lighthouse IPFS (REAL UPLOAD)
-            console.log("\nStep 1: Uploading to REAL Lighthouse IPFS...");
-            const uploadResult = await this.lighthouseService.uploadEncryptedFile(
-                data.filePath,
-                unlockTime,
-                path.basename(data.filePath)
-            );
-
-            console.log(`Real IPFS upload completed`);
-            console.log(`IPFS CID: ${uploadResult.Hash}`);
-            console.log(`Encryption key: ${uploadResult.encryptionKey}`);
-            console.log(`File accessible at: https://gateway.lighthouse.storage/ipfs/${uploadResult.Hash}`);
-
-            // Step 2: Store CID in smart contract
-            console.log("\nStep 2: Storing CID in smart contract...");
-            
-            const tx = await this.contract.createTimeCapsule(
-                uploadResult.Hash,
-                uploadResult.encryptionKey || "",
-                unlockTime,
-                data.recipientEmail,
-                data.title,
-                fileSize,
-                fileType
-            );
-
-            console.log(`Transaction submitted: ${tx.hash}`);
-            console.log(`Waiting for confirmation...`);
-            
-            const receipt = await tx.wait();
-            console.log(`Transaction confirmed in block: ${receipt.blockNumber}`);
-            console.log(`Gas used: ${receipt.gasUsed.toString()}`);
-
-            // Extract capsule ID from events
-            const capsuleId = await this.extractCapsuleIdFromReceipt(receipt);
-            
-            // Step 3: Log complete details
-            console.log("\nTIME CAPSULE CREATED SUCCESSFULLY");
-            console.log("=====================================");
+            console.log("\n" + "=".repeat(50));
+            console.log("TIMECAPSULE CREATED SUCCESSFULLY");
+            console.log("=".repeat(50));
             console.log(`Capsule ID: ${capsuleId}`);
             console.log(`IPFS CID: ${uploadResult.Hash}`);
-            console.log(`File: ${data.filePath}`);
-            console.log(`Title: ${data.title}`);
-            console.log(`Recipient: ${data.recipientEmail}`);
-            console.log(`File Size: ${fileSize} bytes`);
-            console.log(`File Type: ${fileType}`);
-            console.log(`Creation Time: ${new Date().toISOString()}`);
+            console.log(`Transaction: ${receipt.hash}`);
+            console.log(`Block: ${receipt.blockNumber}`);
             console.log(`Unlock Time: ${new Date(unlockTime * 1000).toISOString()}`);
-            console.log(`Encryption Key: ${uploadResult.encryptionKey}`);
-            console.log(`Contract Address: ${await this.contract.getAddress()}`);
-            console.log(`Transaction Hash: ${tx.hash}`);
-            console.log(`IPFS Gateway URL: https://gateway.lighthouse.storage/ipfs/${uploadResult.Hash}`);
-            console.log("=====================================");
+            console.log(`Gas Used: ${receipt.gasUsed}`);
+            console.log("=".repeat(50));
+        }
+        
+        fs.unlinkSync(tempFilePath);
+    }
 
-        } catch (error) {
-            console.error("Error creating time capsule:", error);
-            throw error;
+    async listTimeCapsules(): Promise<void> {
+        console.log("\nYour TimeCapsules");
+        console.log("-".repeat(30));
+        
+        const capsuleCount = await this.blocklockContract.nextCapsuleId();
+        let foundCapsules = false;
+        
+        for (let i = 1; i < capsuleCount; i++) {
+            try {
+                const details = await this.blocklockContract.getTimeCapsule(i);
+                const creator = details[3].toString();
+                const recipient = details[4].toString();
+                
+                if (creator.toLowerCase() === this.senderAddress.toLowerCase() ||
+                    recipient.toLowerCase() === this.senderAddress.toLowerCase()) {
+                    
+                    foundCapsules = true;
+                    const status = details[7] ? "UNLOCKED" : "LOCKED";
+                    const role = creator.toLowerCase() === this.senderAddress.toLowerCase() ? "SENDER" : "RECIPIENT";
+                    
+                    console.log(`\nCapsule ID: ${i}`);
+                    console.log(`Role: ${role}`);
+                    console.log(`Status: ${status}`);
+                    console.log(`Title: ${details[6]}`);
+                    console.log(`Created: ${new Date(Number(details[5]) * 1000).toISOString()}`);
+                    console.log(`Unlock: ${new Date(Number(details[2]) * 1000).toISOString()}`);
+                    console.log(`Creator: ${creator}`);
+                    console.log(`Recipient: ${recipient}`);
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+        
+        if (!foundCapsules) {
+            console.log("No TimeCapsules found for your address");
         }
     }
 
-    /**
-     * Unlock a time capsule if the time has come
-     */
-    async unlockTimeCapsule(capsuleId: number, downloadPath?: string): Promise<void> {
-        try {
-            console.log(`Attempting to unlock time capsule ID: ${capsuleId}`);
-
-            // Check if capsule can be unlocked
-            const canUnlock = await this.contract.canUnlock(capsuleId);
-            if (!canUnlock) {
-                const timeUntilUnlock = await this.contract.getTimeUntilUnlock(capsuleId);
-                const unlockDate = new Date(Date.now() + (Number(timeUntilUnlock) * 1000));
-                throw new Error(`Capsule cannot be unlocked yet. Time remaining: ${timeUntilUnlock}s (unlocks at: ${unlockDate.toISOString()})`);
-            }
-
-            // Unlock the capsule
-            console.log("Unlocking capsule...");
-            const tx = await this.contract.unlockTimeCapsule(capsuleId);
-            
-            console.log(`Unlock transaction: ${tx.hash}`);
-            const receipt = await tx.wait();
-            console.log(`Unlock confirmed in block: ${receipt.blockNumber}`);
-
-            // Get capsule details
-            const capsuleDetails = await this.contract.getTimeCapsule(capsuleId);
-            const cid = capsuleDetails[0]; // ipfsCid
-
-            console.log(`Retrieved IPFS CID: ${cid}`);
-
-            // Download file if path provided
-            if (downloadPath && cid) {
-                console.log(`Downloading file to: ${downloadPath}`);
-                await this.lighthouseService.downloadFile(cid, downloadPath);
-                console.log(`File downloaded successfully`);
-            }
-
-            // Log unlock details
-            console.log("\nTIME CAPSULE UNLOCKED SUCCESSFULLY");
-            console.log("====================================");
-            console.log(`Capsule ID: ${capsuleId}`);
-            console.log(`IPFS CID: ${cid}`);
-            console.log(`Unlock Time: ${new Date().toISOString()}`);
-            console.log(`Transaction Hash: ${tx.hash}`);
-            console.log(`IPFS Gateway URL: https://gateway.lighthouse.storage/ipfs/${cid}`);
-            if (downloadPath) {
-                console.log(`Downloaded to: ${downloadPath}`);
-            }
-            console.log("====================================");
-
-        } catch (error) {
-            console.error("Error unlocking time capsule:", error);
-            throw error;
+    async viewTimeCapsuleDetails(): Promise<void> {
+        const capsuleIdInput = await this.question("\nEnter Capsule ID: ");
+        const capsuleId = parseInt(capsuleIdInput);
+        
+        if (isNaN(capsuleId) || capsuleId < 1) {
+            console.log("Invalid Capsule ID");
+            return;
         }
-    }
-
-    /**
-     * Get details of a specific time capsule
-     */
-    async getTimeCapsuleDetails(capsuleId: number): Promise<void> {
+        
         try {
-            console.log(`Getting details for time capsule ID: ${capsuleId}`);
+            const details = await this.blocklockContract.getTimeCapsule(capsuleId);
             
-            const details = await this.contract.getTimeCapsule(capsuleId);
-            const canUnlock = await this.contract.canUnlock(capsuleId);
-            const timeUntilUnlock = await this.contract.getTimeUntilUnlock(capsuleId);
-
-            console.log("\nTIME CAPSULE DETAILS");
-            console.log("=======================");
-            console.log(`Capsule ID: ${capsuleId}`);
-            console.log(`IPFS CID: ${details[0]}`);
-            console.log(`Encryption Key: ${details[1]}`);
-            console.log(`Unlock Time: ${new Date(Number(details[2]) * 1000).toISOString()}`);
-            console.log(`Creation Time: ${new Date(Number(details[3]) * 1000).toISOString()}`);
-            console.log(`Creator: ${details[4]}`);
-            console.log(`Recipient Email: ${details[5]}`);
+            console.log("\n" + "=".repeat(60));
+            console.log(`TIMECAPSULE ${capsuleId} DETAILS`);
+            console.log("=".repeat(60));
             console.log(`Title: ${details[6]}`);
-            console.log(`Is Unlocked: ${details[7]}`);
+            console.log(`Creator: ${details[3]}`);
+            console.log(`Recipient: ${details[4]}`);
+            console.log(`IPFS CID: ${details[0]}`);
+            console.log(`Blocklock Request ID: ${details[1]}`);
+            console.log(`Created: ${new Date(Number(details[5]) * 1000).toISOString()}`);
+            console.log(`Unlock Time: ${new Date(Number(details[2]) * 1000).toISOString()}`);
+            console.log(`Current Time: ${new Date().toISOString()}`);
+            console.log(`Status: ${details[7] ? 'UNLOCKED' : 'LOCKED'}`);
+            console.log(`Uses Blocklock: ${details[11] ? 'YES' : 'NO'}`);
+            console.log(`Has Decryption Key: ${details[10] ? 'YES' : 'NO'}`);
             console.log(`File Size: ${details[8]} bytes`);
             console.log(`File Type: ${details[9]}`);
-            console.log(`Can Unlock Now: ${canUnlock}`);
-            if (!canUnlock && Number(timeUntilUnlock) > 0) {
-                console.log(`Time Until Unlock: ${timeUntilUnlock}s (${new Date(Date.now() + Number(timeUntilUnlock) * 1000).toISOString()})`);
-            }
-            console.log(`IPFS Gateway URL: https://gateway.lighthouse.storage/ipfs/${details[0]}`);
-            console.log("=======================");
-
+            
+            const canUnlock = await this.blocklockContract.canUnlock(capsuleId);
+            const timeUntilUnlock = await this.blocklockContract.getTimeUntilUnlock(capsuleId);
+            
+            console.log(`Can Unlock Now: ${canUnlock ? 'YES' : 'NO'}`);
+            console.log(`Time Until Unlock: ${timeUntilUnlock} seconds`);
+            console.log("=".repeat(60));
+            
         } catch (error) {
-            console.error("Error getting time capsule details:", error);
-            throw error;
+            console.log("Error retrieving TimeCapsule details:", error);
         }
     }
 
-    private parseUnlockTime(dateString: string): number {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            throw new Error(`Invalid date format: ${dateString}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM`);
+    async unlockTimeCapsule(): Promise<void> {
+        const capsuleIdInput = await this.question("\nEnter Capsule ID to unlock: ");
+        const capsuleId = parseInt(capsuleIdInput);
+        
+        if (isNaN(capsuleId) || capsuleId < 1) {
+            console.log("Invalid Capsule ID");
+            return;
         }
         
-        const now = Date.now() / 1000;
-        const unlockTime = Math.floor(date.getTime() / 1000);
-        
-        if (unlockTime <= now) {
-            throw new Error("Unlock time must be in the future");
-        }
-        
-        return unlockTime;
-    }
-
-    private getFileType(filePath: string): string {
-        const ext = path.extname(filePath).toLowerCase();
-        const mimeTypes: { [key: string]: string } = {
-            '.txt': 'text/plain',
-            '.pdf': 'application/pdf',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.mp4': 'video/mp4',
-            '.mp3': 'audio/mpeg',
-            '.zip': 'application/zip',
-            '.json': 'application/json'
-        };
-        return mimeTypes[ext] || 'application/octet-stream';
-    }
-
-    private async extractCapsuleIdFromReceipt(receipt: any): Promise<number> {
         try {
-            // Look for TimeCapsuleCreated event
-            const event = receipt.logs.find((log: any) => {
-                try {
-                    const decoded = this.contract.interface.parseLog(log);
-                    return decoded.name === 'TimeCapsuleCreated';
-                } catch {
-                    return false;
-                }
-            });
-
-            if (event) {
-                const decoded = this.contract.interface.parseLog(event);
-                return Number(decoded.args[0]); // capsuleId is the first parameter
+            const details = await this.blocklockContract.getTimeCapsule(capsuleId);
+            const canUnlock = await this.blocklockContract.canUnlock(capsuleId);
+            const timeUntilUnlock = await this.blocklockContract.getTimeUntilUnlock(capsuleId);
+            
+            console.log("\nTimeCapsule Status Check");
+            console.log("-".repeat(30));
+            console.log(`Current Time: ${new Date().toISOString()}`);
+            console.log(`Unlock Time: ${new Date(Number(details[2]) * 1000).toISOString()}`);
+            console.log(`Time Remaining: ${timeUntilUnlock} seconds`);
+            console.log(`Already Unlocked: ${details[7] ? 'YES' : 'NO'}`);
+            console.log(`Can Unlock: ${canUnlock ? 'YES' : 'NO'}`);
+            
+            if (details[7]) {
+                console.log("\nTimeCapsule already unlocked. Retrieving content...");
+                await this.retrieveAndDisplayContent(capsuleId, details[0]);
+                return;
             }
             
-            // Fallback: get the latest capsule ID
-            const totalCapsules = await this.contract.getTotalCapsules();
-            return Number(totalCapsules);
+            if (!canUnlock) {
+                console.log("\nTimeCapsule cannot be unlocked yet.");
+                console.log(`Wait ${Math.ceil(Number(timeUntilUnlock) / 3600)} more hours.`);
+                return;
+            }
+            
+            console.log("\nUnlocking TimeCapsule...");
+            
+            const tx = await this.blocklockContract.unlockTimeCapsule(capsuleId);
+            console.log(`Unlock transaction: ${tx.hash}`);
+            console.log("Waiting for confirmation...");
+            
+            const receipt = await tx.wait();
+            if (receipt) {
+                console.log("TimeCapsule unlocked successfully!");
+                console.log(`Transaction confirmed in block: ${receipt.blockNumber}`);
+                
+                await this.retrieveAndDisplayContent(capsuleId, details[0]);
+            }
+            
         } catch (error) {
-            console.warn("Could not extract capsule ID from receipt, using total count");
-            const totalCapsules = await this.contract.getTotalCapsules();
-            return Number(totalCapsules);
+            console.log("Error unlocking TimeCapsule:", error);
+        }
+    }
+
+    async retrieveAndDisplayContent(capsuleId: number, ipfsCid: string): Promise<void> {
+        console.log("\nRetrieving TimeCapsule content...");
+        console.log(`Downloading from IPFS: ${ipfsCid}`);
+        
+        const downloadPath = path.join(__dirname, "..", `retrieved_${capsuleId}_${Date.now()}.txt`);
+        
+        try {
+            await this.lighthouseService.downloadFile(ipfsCid, downloadPath);
+            
+            if (fs.existsSync(downloadPath)) {
+                const content = fs.readFileSync(downloadPath, 'utf8');
+                
+                console.log("\n" + "=".repeat(80));
+                console.log("TIMECAPSULE CONTENT RETRIEVED");
+                console.log("=".repeat(80));
+                console.log(content);
+                console.log("=".repeat(80));
+                
+                fs.unlinkSync(downloadPath);
+                console.log("Content successfully retrieved and displayed.");
+            } else {
+                throw new Error("File download failed");
+            }
+            
+        } catch (error) {
+            console.log("Error downloading content:", error);
+            console.log("\nAlternative access methods:");
+            console.log(`Direct IPFS: https://gateway.lighthouse.storage/ipfs/${ipfsCid}`);
+            console.log(`Local IPFS: http://localhost:8080/ipfs/${ipfsCid}`);
         }
     }
 }
 
-// CLI Interface
 async function main() {
-    const args = process.argv.slice(2);
-    
-    if (args.length === 0) {
-        console.log(`
-TimeCapsule Manager - CLI Interface
-==================================
-
-Commands:
-  create <file_path> <title> <recipient_email> <unlock_date> [file_type]
-    - Create a new time capsule
-    - unlock_date format: YYYY-MM-DD or "YYYY-MM-DD HH:MM"
-    - Example: create ./myfile.txt "My Message" user@example.com "2024-12-25 10:00"
-
-  unlock <capsule_id> [download_path]
-    - Unlock a time capsule and optionally download the file
-    - Example: unlock 1 ./downloaded_file.txt
-
-  details <capsule_id>
-    - Get details of a specific time capsule
-    - Example: details 1
-
-  status
-    - Show contract status and total capsules
-
-Environment Variables Required:
-- LIGHTHOUSE_API_KEY: Your Lighthouse API key
-- PRIVATE_KEY: Your wallet private key (for contract interactions)
-        `);
-        return;
-    }
-
-    const command = args[0];
-    const manager = new TimeCapsuleManager();
-    
     try {
+        const manager = new TimeCapsuleManager();
         await manager.initialize();
-
-        switch (command) {
-            case 'create':
-                if (args.length < 5) {
-                    console.error("Usage: create <file_path> <title> <recipient_email> <unlock_date> [file_type]");
-                    return;
-                }
-                await manager.createTimeCapsule({
-                    filePath: args[1],
-                    title: args[2],
-                    recipientEmail: args[3],
-                    unlockDate: args[4],
-                    fileType: args[5]
-                });
-                break;
-
-            case 'unlock':
-                if (args.length < 2) {
-                    console.error("Usage: unlock <capsule_id> [download_path]");
-                    return;
-                }
-                await manager.unlockTimeCapsule(parseInt(args[1]), args[2]);
-                break;
-
-            case 'details':
-                if (args.length < 2) {
-                    console.error("Usage: details <capsule_id>");
-                    return;
-                }
-                await manager.getTimeCapsuleDetails(parseInt(args[1]));
-                break;
-
-            case 'status':
-                console.log("Contract Status");
-                console.log("==================");
-                // Add status functionality here
-                break;
-
-            default:
-                console.error(`Unknown command: ${command}`);
-                break;
-        }
+        await manager.showMenu();
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Failed to initialize TimeCapsule Manager:", error);
         process.exit(1);
     }
 }
 
-// Run the CLI if this file is executed directly
 if (require.main === module) {
     main().catch(console.error);
 }
-
-export { TimeCapsuleManager };

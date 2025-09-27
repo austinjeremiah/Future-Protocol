@@ -1,0 +1,18 @@
+TIMECAPSULE MESSAGE
+=====================
+
+Title: Austin
+From: 0xe01Add0c3640a8314132bAF491d101A38ffEF4f0
+To: 0x588F6b3169F60176c1143f8BaB47bCf3DeEbECdc
+Created: 2025-09-27T04:56:06.007Z
+Unlock Time: 2025-09-27T05:56:06.000Z
+
+MESSAGE CONTENT:
+================
+Hello
+
+TECHNICAL INFO:
+===============
+This TimeCapsule uses Blocklock encryption for time-locked access.
+File stored on IPFS via Lighthouse for decentralized storage.
+Smart contract manages unlock conditions and access control.
