@@ -63,7 +63,7 @@ export class TimeCapsuleService {
       console.log('🚀 Creating complete time capsule...');
       console.log('📁 Data:', data);
 
-      let ipfsResult: any;
+  let ipfsResult: unknown;
       let fileSize = 1024;
       let fileType = "text/plain";
 
@@ -93,7 +93,7 @@ export class TimeCapsuleService {
             console.log(`   IPFS CID: ${ipfsResult.Hash}`);
             console.log(`   Content will be readable by recipient as text`);
             
-          } catch (readError: any) {
+          } catch (readError) {
             console.error('❌ Failed to read text file content:', readError);
             throw new Error(`Failed to read text file: ${readError?.message || 'Unknown error'}`);
           }
@@ -205,7 +205,7 @@ export class TimeCapsuleService {
     capsule: TimeCapsule;
     content: string;
     txHash?: string;
-    fileMetadata?: any;
+  fileMetadata?: Record<string, unknown>;
   }> {
     try {
       console.log(`🚀 Starting zkTLS Unlock Sequence for TimeCapsule ${capsuleId}`);
@@ -264,7 +264,7 @@ export class TimeCapsuleService {
       console.log(`🌐 Testing gateway accessibility: https://gateway.lighthouse.storage/ipfs/${capsule.ipfsCid}`);
       
       let content: string;
-      let fileMetadata: any;
+  let fileMetadata: Record<string, unknown>;
       
       try {
         // First get file metadata to understand what type of file we're dealing with
