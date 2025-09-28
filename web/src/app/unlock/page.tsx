@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { TimeCapsuleService } from "@/lib/services/timecapsule";
 import { LighthouseService } from "@/lib/services/lighthouse";
-import SelfProtocolVerification from "@/components/SelfProtocolVerification";
+// ...existing code...
 
 export function SidebarDemo() {
   const { address, isConnected } = useAccount();
@@ -619,12 +619,7 @@ const UnlockContent = () => {
                         </svg>
                       </button>
                       
-                      {/* Verification Component */}
-                      <SelfProtocolVerification
-                        onVerificationSuccess={handleVerificationSuccess}
-                        onVerificationError={handleVerificationError}
-                        capsuleId={parseInt(formData.capsuleId) || undefined}
-                      />
+                      {/* Verification Component removed: SelfProtocolVerification */}
                     </div>
                   </div>
                 )}
