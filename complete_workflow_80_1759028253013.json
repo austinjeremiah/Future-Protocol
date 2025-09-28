@@ -1,0 +1,67 @@
+{
+  "execution": {
+    "status": "SUCCESS",
+    "timestamp": "2025-09-28T02:57:32.664Z",
+    "totalDurationSeconds": 214,
+    "completedPhases": [
+      "zkTLS Proof Generation",
+      "NTP Time Validation",
+      "Self Protocol Verification",
+      "TimeCapsule Content Creation",
+      "IPFS Content Upload",
+      "Blocklock Encryption Setup",
+      "TimeCapsule Creation"
+    ]
+  },
+  "timeCapsule": {
+    "operationType": "COMPLETE_WORKFLOW_CREATION",
+    "id": 80,
+    "title": "Message",
+    "creator": "0xe01Add0c3640a8314132bAF491d101A38ffEF4f0",
+    "recipient": "0x8452666365e6e53c2Eed08873E61272E76c41758",
+    "unlockTime": "2025-09-28T02:57:30.000Z",
+    "isUnlocked": false,
+    "transactionHash": "0x3bddaa906dbc321a3de70425906aeb4e8d90d1e83afb2f2dec8572e9dae31994",
+    "blockNumber": 3056728,
+    "gasUsed": "56572565"
+  },
+  "zkTLS": {
+    "proofGenerated": true,
+    "protocol": "Groth16",
+    "curve": "bn128",
+    "proofHash": "6c7243a8cec8a607332ee8bcad90396e6751c1e61a413db6fd05f28f9e76acc7",
+    "ntpValidation": {
+      "sourcesChecked": 4,
+      "sourcesValid": 1,
+      "validationHash": "a8dae108d71997cb9a45d5e7b1dbe15e080557214a1ad376ab12cc6759188141"
+    }
+  },
+  "selfProtocol": {
+    "verified": true,
+    "userAddress": "0xe01Add0c3640a8314132bAF491d101A38ffEF4f0",
+    "verificationHash": "27c974e1cbd53684e7b2a24ea3a6a1e98bcd08ff39b02a8500be12cb0439cab7",
+    "universalLink": "https://redirect.self.xyz?selfApp=%7B%22sessionId%22%3A%22d5b51108-283f-47b9-ada5-16a3f63037bf%22%2C%22userIdType%22%3A%22hex%22%2C%22devMode%22%3Afalse%2C%22endpointType%22%3A%22staging_celo%22%2C%22header%22%3A%22%22%2C%22logoBase64%22%3A%22https%3A%2F%2Fi.postimg.cc%2FmrmVf9hm%2Fself.png%22%2C%22deeplinkCallback%22%3A%22%22%2C%22disclosures%22%3A%7B%22name%22%3Atrue%2C%22minimumAge%22%3A18%2C%22nationality%22%3Atrue%2C%22date_of_birth%22%3Atrue%2C%22excludedCountries%22%3A%5B%22USA%22%5D%7D%2C%22chainID%22%3A11142220%2C%22version%22%3A2%2C%22userDefinedData%22%3A%22Identity%20verification%20for%20TimeCapsule%20Manager%20access%22%2C%22appName%22%3A%22Future%20Protocol%20TimeCapsule%20Manager%22%2C%22scope%22%3A%22test-scope%22%2C%22endpoint%22%3A%220xe355eb8ddc5ae5a1fb8265b5394c5b4e47604d2e%22%2C%22userId%22%3A%220000000000000000000000000000000000000000%22%7D",
+    "configId": "db48e958-ca30-4334-b40f-08d928da7328",
+    "txHash": "verification_completed",
+    "blockNumber": 0,
+    "timestamp": 1759028160570
+  },
+  "storage": {
+    "ipfsCid": "bafkreicjotva6m3ehv7p2slixt4e3dx3trvueulqv2ayerqzn2cy5m2a4e",
+    "provider": "Lighthouse IPFS Network",
+    "contentRetrieved": true,
+    "contentLength": 1532
+  },
+  "blockchain": {
+    "network": "Filecoin Calibration",
+    "contractAddress": "0xf939f81b62a57157C6fA441bEb64B2E684382991",
+    "currentBlock": 3056728
+  },
+  "contentAnalysis": {
+    "messageDecrypted": true,
+    "contentPreview": "\nCOMPLETE WORKFLOW TIMECAPSULE\n============================\n\nSECURE TIME CAPSULE CONTENT\n\nTitle: Message\nFrom: 0xe01Add0c3640a8314132bAF491d101A38ffEF4f0\nTo: 0x8452666365e6e53c2Eed08873E61272E76c41758...",
+    "encryptionKeyUsed": true,
+    "algorithmType": "AES-256"
+  },
+  "fullDecryptedContent": "\nCOMPLETE WORKFLOW TIMECAPSULE\n============================\n\nSECURE TIME CAPSULE CONTENT\n\nTitle: Message\nFrom: 0xe01Add0c3640a8314132bAF491d101A38ffEF4f0\nTo: 0x8452666365e6e53c2Eed08873E61272E76c41758\nCreated: 2025-09-28T02:56:20.857Z\n\nMESSAGE:\n--------\nHi There\n\nWORKFLOW VERIFICATION:\n=====================\n zkTLS Proof: Groth16 (bn128)\n NTP Validation: 1/4 sources\n Self Protocol: Identity Verified\n Verification Hash: 27c974e1cbd53684e7b2...\n Universal Link: https://redirect.self.xyz?selfApp=%7B%22sessionId%22%3A%22d5b51108-283f-47b9-ada5-16a3f63037bf%22%2C%22userIdType%22%3A%22hex%22%2C%22devMode%22%3Afalse%2C%22endpointType%22%3A%22staging_celo%22%2C%22header%22%3A%22%22%2C%22logoBase64%22%3A%22https%3A%2F%2Fi.postimg.cc%2FmrmVf9hm%2Fself.png%22%2C%22deeplinkCallback%22%3A%22%22%2C%22disclosures%22%3A%7B%22name%22%3Atrue%2C%22minimumAge%22%3A18%2C%22nationality%22%3Atrue%2C%22date_of_birth%22%3Atrue%2C%22excludedCountries%22%3A%5B%22USA%22%5D%7D%2C%22chainID%22%3A11142220%2C%22version%22%3A2%2C%22userDefinedData%22%3A%22Identity%20verification%20for%20TimeCapsule%20Manager%20access%22%2C%22appName%22%3A%22Future%20Protocol%20TimeCapsule%20Manager%22%2C%22scope%22%3A%22test-scope%22%2C%22endpoint%22%3A%220xe355eb8ddc5ae5a1fb8265b5394c5b4e47604d2e%22%2C%22userId%22%3A%220000000000000000000000000000000000000000%22%7D\n\nThis TimeCapsule demonstrates enterprise-grade implementation\nwith complete workflow including all security features.\n\nWorkflow ID: 5dd17882-54f4-4757-8173-fa3f87f97589\nSecurity Level: Maximum\n"
+}
