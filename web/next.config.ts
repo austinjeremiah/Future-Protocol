@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     // Add styled-components support for SSR
     styledComponents: true,
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config: any, { isServer }: { isServer: boolean }) => {
     // Fixes npm packages that depend on `fs` module
     if (!isServer) {
       config.resolve.fallback = {
