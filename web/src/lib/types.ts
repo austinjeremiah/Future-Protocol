@@ -30,7 +30,7 @@ export interface UploadResponse {
 
 export interface ContractConfig {
   address: string;
-  abi: any[];
+  abi: unknown[];
 }
 
 export interface LighthouseConfig {

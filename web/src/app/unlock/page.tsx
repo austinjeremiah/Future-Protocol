@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import type { FC } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useRouter } from "next/navigation";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
@@ -136,8 +137,8 @@ const UnlockContent = () => {
     type: 'success' | 'error' | null;
     message: string;
     content?: string;
-    fileMetadata?: any;
-    capsule?: any;
+  fileMetadata?: Record<string, unknown>;
+  capsule?: Record<string, unknown>;
   }>({ type: null, message: '' });
   
   const [zkTLSLogs, setZkTLSLogs] = useState<string[]>([]);
@@ -191,7 +192,7 @@ const UnlockContent = () => {
       const originalConsoleLog = console.log;
       const logs: string[] = [];
       
-      console.log = (...args: any[]) => {
+  console.log = (...args: unknown[]) => {
         const logMessage = args.map(arg => 
           typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
         ).join(' ');
@@ -232,14 +233,20 @@ const UnlockContent = () => {
         }, 1000); // Wait 1 second before auto-downloading
       }
 
-    } catch (error: any) {
+  } catch (error) {
       // Restore original console.log
       console.log = console.log;
       
       console.error('❌ Error unlocking time capsule:', error);
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
       setUnlockResult({
         type: 'error',
-        message: `Failed to unlock time capsule: ${error.message || 'Unknown error'}`
+        message: `Failed to unlock time capsule: ${errorMessage}`
       });
     } finally {
       setIsUnlocking(false);
