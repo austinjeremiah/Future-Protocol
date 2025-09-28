@@ -141,6 +141,13 @@ const Dashboard = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('📁 File selected for upload:');
+      console.log(`   Name: ${file.name}`);
+      console.log(`   Size: ${file.size} bytes`);
+      console.log(`   Type: ${file.type}`);
+      console.log(`   Last Modified: ${new Date(file.lastModified).toISOString()}`);
+      console.log(`   File object:`, file);
+      
       setFormData(prev => ({ ...prev, file }));
     }
   };
@@ -262,9 +269,40 @@ const Dashboard = () => {
                       Supports: Photos, Videos, Audio, Documents (Max: 100MB)
                     </p>
                     {formData.file && (
-                      <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
-                        Selected: {formData.file.name}
-                      </p>
+                      <div className="mt-3 p-3 bg-emerald-900/30 border border-emerald-500/50 rounded-lg">
+                        <div className="flex items-center mb-2">
+                          <svg className="w-4 h-4 mr-2 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/>
+                            <path d="M14 2v6h6"/>
+                          </svg>
+                          <span className="text-emerald-300 text-sm font-medium">📁 File Ready to Upload</span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p className="text-emerald-200">
+                            <strong>Name:</strong> {formData.file.name}
+                          </p>
+                          <p className="text-emerald-200">
+                            <strong>Size:</strong> {(formData.file.size / 1024).toFixed(2)} KB ({formData.file.size} bytes)
+                          </p>
+                          <p className="text-emerald-200">
+                            <strong>Type:</strong> {formData.file.type}
+                          </p>
+                        </div>
+                        
+                        {formData.file.type === 'text/plain' || formData.file.name.toLowerCase().endsWith('.txt') ? (
+                          <div className="mt-2 p-2 bg-blue-900/30 border border-blue-500/50 rounded">
+                            <p className="text-xs text-blue-300">
+                              📄 <strong>Text File:</strong> Recipients will see the actual text content from inside this file
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-2 bg-purple-900/30 border border-purple-500/50 rounded">
+                            <p className="text-xs text-purple-300">
+                              📁 <strong>Binary File:</strong> Recipients will download the exact same file you uploaded
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

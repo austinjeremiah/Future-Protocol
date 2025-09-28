@@ -1,0 +1,11 @@
+{
+  "status": "FAILED",
+  "error": "Error: getaddrinfo ENOTFOUND rpc.ankr.com",
+  "completedPhases": [
+    "zkTLS Proof Generation",
+    "NTP Time Validation",
+    "Blocklock Encryption Setup"
+  ],
+  "timestamp": "2025-09-28T01:33:23.608Z",
+  "executionTime": 14
+}

@@ -60,44 +60,131 @@ export class TimeCapsuleService {
     capsuleId: number;
   }> {
     try {
-      console.log('Creating complete time capsule...');
-      console.log('Data:', data);
+      console.log('🚀 Creating complete time capsule...');
+      console.log('📁 Data:', data);
 
-      // Create message content
-      const messageContent = this.formatTimeCapsuleContent(data);
+      let ipfsResult: any;
+      let fileSize = 1024;
+      let fileType = "text/plain";
 
-      // Upload content to IPFS
-      console.log('Uploading content to IPFS...');
-      const ipfsResult = await this.lighthouseService.uploadText(
-        messageContent,
-        `timecapsule-${Date.now()}.txt`
-      );
+      if (data.file) {
+        // Check if it's a text file that should be read as content
+        if (data.file.type === 'text/plain' || data.file.name.toLowerCase().endsWith('.txt')) {
+          console.log('� Text file detected - extracting content for storage...');
+          console.log(`   File name: ${data.file.name}`);
+          console.log(`   File size: ${data.file.size} bytes`);
+          console.log(`   File type: ${data.file.type}`);
+          
+          try {
+            // Read the text file content
+            const fileContent = await this.readFileAsText(data.file);
+            console.log(`📖 Text content extracted (${fileContent.length} characters)`);
+            console.log(`📝 Content preview: ${fileContent.substring(0, 200)}...`);
+            
+            // Upload the actual text content to IPFS
+            ipfsResult = await this.lighthouseService.uploadText(
+              fileContent,
+              data.file.name
+            );
+            fileSize = fileContent.length;
+            fileType = 'text/plain';
+            
+            console.log('✅ Text content uploaded to IPFS successfully!');
+            console.log(`   IPFS CID: ${ipfsResult.Hash}`);
+            console.log(`   Content will be readable by recipient as text`);
+            
+          } catch (readError: any) {
+            console.error('❌ Failed to read text file content:', readError);
+            throw new Error(`Failed to read text file: ${readError?.message || 'Unknown error'}`);
+          }
+        } else {
+          // For binary files (PDF, images, etc.), upload the file as-is
+          console.log('📁 Binary file detected - uploading file directly...');
+          console.log(`   File name: ${data.file.name}`);
+          console.log(`   File size: ${data.file.size} bytes`);
+          console.log(`   File type: ${data.file.type}`);
+          
+          ipfsResult = await this.lighthouseService.uploadFile(data.file);
+          fileSize = data.file.size;
+          fileType = data.file.type;
+          
+          console.log('✅ Binary file uploaded to IPFS successfully!');
+          console.log(`   IPFS CID: ${ipfsResult.Hash}`);
+          console.log(`   File will be downloadable by recipient`);
+        }
+        
+        console.log(`   IPFS Result Full Object:`, ipfsResult);
+        console.log(`   Gateway URL: https://gateway.lighthouse.storage/ipfs/${ipfsResult.Hash}`);
+        
+        // Test immediate retrieval to verify upload
+        console.log('🔍 Testing immediate file retrieval...');
+        try {
+          const testMetadata = await this.lighthouseService.getFileMetadata(ipfsResult.Hash);
+          console.log(`✅ Immediate retrieval test successful:`, testMetadata);
+        } catch (testError) {
+          console.log(`⚠️  Immediate retrieval test failed (this is normal for new uploads):`, testError);
+        }
+        
+      } else {
+        // Create message content and upload as text
+        console.log('📤 No file provided, creating text message...');
+        const messageContent = this.formatTimeCapsuleContent(data);
+        
+        console.log('📤 Uploading message content to IPFS...');
+        ipfsResult = await this.lighthouseService.uploadText(
+          messageContent,
+          `timecapsule-${Date.now()}.txt`
+        );
+        
+        console.log('✅ Message uploaded to IPFS successfully!');
+        console.log(`   IPFS CID: ${ipfsResult.Hash}`);
+        console.log(`   IPFS Result Full Object:`, ipfsResult);
+      }
 
-      console.log('Content uploaded to IPFS:', ipfsResult.Hash);
-
-      // If there's a file, we could upload it separately or include it in the message
-      // For now, we'll include file info in the message content
-
-      // Create time capsule on blockchain
-      console.log('Creating time capsule on blockchain...');
+      // Create time capsule on blockchain with the actual file CID
+      console.log('⛓️  Creating time capsule on blockchain...');
+      console.log(`   🔗 CRITICAL: Storing IPFS CID in contract: ${ipfsResult.Hash}`);
+      console.log(`   📧 Recipient: ${data.recipientAddress}`);
+      console.log(`   ⏰ Unlock time: ${new Date(data.unlockTime * 1000).toISOString()}`);
+      console.log(`   📊 File size: ${fileSize} bytes`);
+      console.log(`   📝 File type: ${fileType}`);
+      console.log(`   🎯 Title: ${data.title}`);
+      
       const txHash = await this.contractService.createTimeCapsule(
-        ipfsResult.Hash,
+        ipfsResult.Hash,  // This is now the actual file CID
         data.recipientAddress,
         data.unlockTime,
         data.title,
         false, // useBlocklock - can be made configurable
-        data.file ? data.file.size : 1024, // fileSize
-        data.file ? data.file.type : "text/plain" // fileType
+        fileSize, // actual file size
+        fileType  // actual file type
       );
+      
+      console.log(`✅ Time capsule created in contract with transaction: ${txHash}`);
 
       // Get the capsule ID (this is approximate - in production you'd get it from the transaction receipt)
       const nextCapsuleId = await this.contractService.getNextCapsuleId();
       const capsuleId = nextCapsuleId - 1;
 
-      console.log('Time capsule created successfully!');
-      console.log(`Capsule ID: ${capsuleId}`);
-      console.log(`Transaction: ${txHash}`);
-      console.log(`IPFS CID: ${ipfsResult.Hash}`);
+      console.log('🎉 Time capsule created successfully!');
+      console.log(`   Capsule ID: ${capsuleId}`);
+      console.log(`   Transaction: ${txHash}`);
+      console.log(`   IPFS CID: ${ipfsResult.Hash}`);
+      console.log(`   File Size: ${fileSize} bytes`);
+      console.log(`   File Type: ${fileType}`);
+
+      // Verify the IPFS upload by checking if it's accessible
+      try {
+        const verifyUrl = `https://gateway.lighthouse.storage/ipfs/${ipfsResult.Hash}`;
+        const verifyResponse = await fetch(verifyUrl, { method: 'HEAD' });
+        if (verifyResponse.ok) {
+          console.log('✅ IPFS upload verified - file is accessible');
+        } else {
+          console.log('⚠️  IPFS upload verification failed, but CID should work');
+        }
+      } catch (verifyError) {
+        console.log('⚠️  Could not verify IPFS upload, but CID should work');
+      }
 
       return {
         txHash,
@@ -106,7 +193,7 @@ export class TimeCapsuleService {
       };
 
     } catch (error) {
-      console.error('Error creating time capsule:', error);
+      console.error('❌ Error creating time capsule:', error);
       throw error;
     }
   }
@@ -118,6 +205,7 @@ export class TimeCapsuleService {
     capsule: TimeCapsule;
     content: string;
     txHash?: string;
+    fileMetadata?: any;
   }> {
     try {
       console.log(`🚀 Starting zkTLS Unlock Sequence for TimeCapsule ${capsuleId}`);
@@ -171,16 +259,58 @@ export class TimeCapsuleService {
       // Step 5: Content Retrieval and Decryption
       console.log("\n📥 Step 5: Content Retrieval and Decryption");
       console.log("-".repeat(40));
-      console.log(`📡 Retrieving content from IPFS: ${capsule.ipfsCid}`);
+      console.log(`� CRITICAL: Retrieving content from IPFS CID: ${capsule.ipfsCid}`);
+      console.log(`📊 Capsule Data from Contract:`, capsule);
+      console.log(`🌐 Testing gateway accessibility: https://gateway.lighthouse.storage/ipfs/${capsule.ipfsCid}`);
       
       let content: string;
+      let fileMetadata: any;
+      
       try {
-        content = await this.lighthouseService.downloadFile(capsule.ipfsCid);
-        console.log(`✅ Content retrieved successfully (${content.length} bytes)`);
+        // First get file metadata to understand what type of file we're dealing with
+        console.log(`🔍 Getting file metadata for CID: ${capsule.ipfsCid}...`);
+        fileMetadata = await this.lighthouseService.getFileMetadata(capsule.ipfsCid);
+        
+        console.log(`📄 File Type: ${fileMetadata.fileType}`);
+        console.log(`📊 File Size: ${fileMetadata.size} bytes`);
+        console.log(`� Content Type: ${fileMetadata.contentType}`);
+        console.log(`�👁️  Can View: ${fileMetadata.isViewable ? 'Yes' : 'No'}`);
+        console.log(`🔍 Full File Metadata:`, fileMetadata);
+        
+        if (fileMetadata.isViewable && fileMetadata.contentType.startsWith('text/')) {
+          // For text files, get the actual content to display
+          console.log(`📖 Text file detected - downloading actual content for display...`);
+          content = await this.lighthouseService.downloadFile(capsule.ipfsCid);
+          console.log(`✅ Text content retrieved successfully (${content.length} characters)`);
+          console.log(`📝 Content preview (first 200 chars): ${content.substring(0, 200)}...`);
+          
+          // For text files, the recipient gets the ACTUAL file content to read
+          console.log(`🎯 RECIPIENT WILL SEE: The actual text content from the uploaded file`);
+          
+        } else {
+          // For binary files (PDF, images, etc.), provide download info
+          console.log(`� Binary file detected - preparing download metadata...`);
+          content = `📁 File Ready for Download
+
+File Type: ${fileMetadata.fileType}
+Size: ${fileMetadata.size} bytes  
+Content Type: ${fileMetadata.contentType}
+IPFS CID: ${capsule.ipfsCid}
+
+This ${fileMetadata.fileType} file will be automatically downloaded when you view the results.
+The downloaded file will be the exact same file that was uploaded by the sender.
+
+Gateway URL: https://gateway.lighthouse.storage/ipfs/${capsule.ipfsCid}`;
+          
+          console.log(`✅ Binary file metadata prepared - file will auto-download for recipient`);
+          console.log(`🎯 RECIPIENT WILL GET: The exact same ${fileMetadata.fileType} file that was uploaded`);
+        }
       } catch (ipfsError) {
-        console.log(`⚠️  IPFS retrieval failed, trying direct gateway access...`);
+        console.log(`⚠️  IPFS retrieval failed for CID: ${capsule.ipfsCid}`);
+        console.log(`❌ Error details:`, ipfsError);
         console.log(`🔗 Direct IPFS Access: https://gateway.lighthouse.storage/ipfs/${capsule.ipfsCid}`);
-        throw new Error(`Failed to retrieve content: ${ipfsError}`);
+        console.log(`🔗 Alternative Gateway: https://ipfs.io/ipfs/${capsule.ipfsCid}`);
+        throw new Error(`Failed to retrieve content from IPFS CID ${capsule.ipfsCid}: ${ipfsError}`);
       }
 
       // Step 6: Blocklock Decryption (if applicable)
@@ -201,7 +331,8 @@ export class TimeCapsuleService {
       return {
         capsule,
         content,
-        txHash
+        txHash,
+        fileMetadata: fileMetadata || null
       };
 
     } catch (error) {
@@ -222,6 +353,29 @@ export class TimeCapsuleService {
    */
   async getTimeCapsule(capsuleId: number): Promise<TimeCapsule> {
     return this.contractService.getTimeCapsule(capsuleId);
+  }
+
+  /**
+   * Read a file as text content
+   */
+  private async readFileAsText(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          resolve(event.target.result as string);
+        } else {
+          reject(new Error('Failed to read file content'));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Error reading file'));
+      };
+      
+      reader.readAsText(file);
+    });
   }
 
   /**

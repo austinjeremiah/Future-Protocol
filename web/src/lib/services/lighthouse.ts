@@ -86,7 +86,7 @@ export class LighthouseService {
   }
 
   /**
-   * Download file content from IPFS by CID
+   * Download file content from IPFS by CID as text (for text files)
    * @param cid IPFS CID
    * @returns Promise with file content as text
    */
@@ -109,6 +109,168 @@ export class LighthouseService {
     } catch (error) {
       console.error("Error downloading from IPFS:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Download file as blob from IPFS by CID (for all file types including PDFs)
+   * @param cid IPFS CID
+   * @returns Promise with file info and download URL
+   */
+  async downloadFileAsBlob(cid: string): Promise<{
+    blob: Blob;
+    contentType: string;
+    size: number;
+    downloadUrl: string;
+    gatewayUrl: string;
+  }> {
+    try {
+      const url = this.getGatewayUrl(cid);
+      console.log(`📥 Downloading file as blob from IPFS: ${url}`);
+
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      const size = blob.size;
+      
+      // Create a download URL for the blob
+      const downloadUrl = URL.createObjectURL(blob);
+      
+      console.log(`✅ File downloaded successfully from IPFS`);
+      console.log(`   Content Type: ${contentType}`);
+      console.log(`   File Size: ${size} bytes`);
+      
+      return {
+        blob,
+        contentType,
+        size,
+        downloadUrl,
+        gatewayUrl: url
+      };
+
+    } catch (error) {
+      console.error("❌ Error downloading file as blob from IPFS:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger file download in browser
+   * @param cid IPFS CID
+   * @param fileName Optional filename for download
+   */
+  async downloadFileForUser(cid: string, fileName?: string): Promise<void> {
+    try {
+      console.log(`🚀 Initiating file download for user: ${cid}`);
+      
+      const fileData = await this.downloadFileAsBlob(cid);
+      
+      // Determine file extension from content type
+      let extension = '';
+      if (fileData.contentType.includes('pdf')) extension = '.pdf';
+      else if (fileData.contentType.includes('text')) extension = '.txt';
+      else if (fileData.contentType.includes('image')) {
+        if (fileData.contentType.includes('png')) extension = '.png';
+        else if (fileData.contentType.includes('jpeg') || fileData.contentType.includes('jpg')) extension = '.jpg';
+      }
+      
+      const downloadFileName = fileName || `timecapsule-${cid.slice(-8)}${extension}`;
+      
+      // Create download link and trigger download
+      const link = document.createElement('a');
+      link.href = fileData.downloadUrl;
+      link.download = downloadFileName;
+      link.style.display = 'none';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(fileData.downloadUrl);
+      }, 100);
+      
+      console.log(`✅ File download initiated: ${downloadFileName}`);
+      
+    } catch (error) {
+      console.error("❌ Error initiating file download:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get file metadata from IPFS
+   * @param cid IPFS CID
+   * @returns Promise with file metadata
+   */
+  async getFileMetadata(cid: string): Promise<{
+    contentType: string;
+    size: number;
+    isViewable: boolean;
+    fileType: string;
+  }> {
+    try {
+      const url = this.getGatewayUrl(cid);
+      console.log(`🔍 Getting metadata for CID: ${cid}`);
+      console.log(`🌐 Gateway URL: ${url}`);
+      
+      const response = await fetch(url, { method: 'HEAD' });
+      console.log(`📡 Response Status: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        console.log(`❌ HTTP error getting metadata for ${cid}:`, response.status, response.statusText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || 'application/octet-stream';
+      const contentLength = response.headers.get('content-length');
+      const size = contentLength ? parseInt(contentLength) : 0;
+      
+      console.log(`📝 Content-Type: ${contentType}`);
+      console.log(`📊 Content-Length: ${contentLength} (${size} bytes)`);
+      
+      // Log all response headers for debugging
+      console.log('📋 All Response Headers:');
+      for (const [key, value] of response.headers.entries()) {
+        console.log(`   ${key}: ${value}`);
+      }
+      
+      // Determine if file can be viewed in browser
+      const isViewable = contentType.startsWith('text/') || 
+                        contentType.includes('pdf') ||
+                        contentType.startsWith('image/');
+      
+      let fileType = 'Unknown';
+      if (contentType.includes('pdf')) fileType = 'PDF';
+      else if (contentType.includes('text')) fileType = 'Text';
+      else if (contentType.includes('image')) fileType = 'Image';
+      else if (contentType.includes('video')) fileType = 'Video';
+      else if (contentType.includes('audio')) fileType = 'Audio';
+      
+      const metadata = {
+        contentType,
+        size,
+        isViewable,
+        fileType
+      };
+      
+      console.log(`✅ File metadata retrieved successfully:`, metadata);
+      return metadata;
+      
+    } catch (error) {
+      console.error(`❌ Error getting file metadata for CID ${cid}:`, error);
+      return {
+        contentType: 'application/octet-stream',
+        size: 0,
+        isViewable: false,
+        fileType: 'Unknown'
+      };
     }
   }
 }
